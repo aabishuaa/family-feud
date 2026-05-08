@@ -936,6 +936,134 @@ body::after {
 .end-team-score { font-family: 'Bebas Neue', sans-serif; font-size: 72px; color: var(--white); line-height: 1; }
 .score-divider  { font-family: 'Bebas Neue', sans-serif; font-size: 44px; color: var(--text-dim); }
 
+/* ═══════════════════════════════════════════════════════════
+   CODES SCREEN (multiplayer room setup)
+══════════════════════════════════════════════════════════════ */
+#codes-screen { z-index: 2; gap: 20px; padding: 20px; }
+
+.codes-card {
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  background: rgba(8,20,70,.75);
+  border: 2px solid var(--gold-dark);
+  border-radius: 20px;
+  padding: 32px 40px;
+  max-width: 620px; width: 100%;
+  box-shadow: 0 0 60px rgba(255,215,0,.12);
+}
+
+.codes-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(32px, 6vw, 56px);
+  letter-spacing: .2em;
+  color: var(--gold);
+  text-shadow: var(--glow-gold-sm);
+}
+
+.game-code-box {
+  text-align: center;
+  background: rgba(255,215,0,.06);
+  border: 1px solid rgba(255,215,0,.25);
+  border-radius: 14px;
+  padding: 14px 32px;
+  width: 100%;
+}
+.codes-label {
+  font-size: 11px; letter-spacing: .22em;
+  color: var(--text-dim); margin-bottom: 6px;
+}
+.game-code-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 10vw, 80px);
+  letter-spacing: .32em;
+  color: var(--gold);
+  text-shadow: var(--glow-gold);
+  line-height: 1;
+}
+
+.player-links {
+  display: flex; gap: 14px; width: 100%; flex-wrap: wrap;
+}
+
+.player-link-group {
+  flex: 1; min-width: 220px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.player-link-header {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+
+.player-link-team-badge {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px; letter-spacing: .14em;
+  padding: 2px 10px; border-radius: 6px;
+}
+.team1-badge { background: rgba(30,144,255,.25); color: var(--team1); }
+.team2-badge { background: rgba(255,69,0,.25);   color: var(--team2); }
+
+.player-link-status {
+  font-size: 11px; letter-spacing: .1em;
+  color: var(--text-dim);
+  transition: color .3s;
+}
+.player-link-status.mp-connected { color: #00dc50; }
+
+.player-link-label {
+  font-size: 11px; letter-spacing: .04em;
+  color: #7a90c0;
+  word-break: break-all;
+  line-height: 1.4;
+  background: rgba(0,0,0,.2);
+  padding: 6px 8px; border-radius: 6px;
+  min-height: 32px;
+}
+
+.btn-copy-link {
+  align-self: flex-start;
+  font-family: 'Oswald', sans-serif; font-size: 12px;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 6px; border: none;
+  background: rgba(255,215,0,.12); color: var(--gold);
+  cursor: pointer; transition: background .2s;
+}
+.btn-copy-link:hover { background: rgba(255,215,0,.22); }
+
+.codes-hint {
+  font-size: 12px; letter-spacing: .06em;
+  color: var(--text-dim); text-align: center;
+  line-height: 1.5;
+}
+
+.codes-actions {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;
+}
+
+.btn-skip-mp {
+  background: none; border: none;
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px; letter-spacing: .1em;
+  color: var(--text-dim); cursor: pointer;
+  text-decoration: underline;
+  transition: color .2s;
+}
+.btn-skip-mp:hover { color: var(--white); }
+
+/* Player online badge in team panels */
+.player-online-badge {
+  font-size: 16px;
+  opacity: .8;
+  animation: softBounce 2s ease-in-out infinite;
+  cursor: default;
+}
+@keyframes softBounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+
 /* ── Utility ──────────────────────────────────────────────── */
 .hidden { display: none !important; }
 

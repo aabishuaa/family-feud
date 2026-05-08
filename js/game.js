@@ -39,6 +39,12 @@
     document.body.dataset.phase = phase;
     updateControlButtons();
     updateStatusBar();
+    // Broadcast to connected player phones
+    Multiplayer.broadcast({
+      phase,
+      buzzerActive: phase === 'faceoff',
+      teamNames: [state.teams[0].name, state.teams[1].name],
+    });
   }
 
   // ── Screen management ──────────────────────────────────────
@@ -58,7 +64,7 @@
   }
 
   // ── START GAME ─────────────────────────────────────────────
-  function startGame() {
+  async function startGame() {
     Sounds.init();
     const n1 = $('team1-name-input').value.trim() || 'Team 1';
     const n2 = $('team2-name-input').value.trim() || 'Team 2';
@@ -67,6 +73,50 @@
     state.round = 0;
     state.usedRounds = shuffle([...Array(GAME_DATA.rounds.length).keys()]);
 
+    // Register buzz handler so player phones can trigger buzz-in
+    Multiplayer.setOnBuzz((teamIdx) => buzzIn(teamIdx));
+
+    // Try to create a multiplayer room via the server
+    const btn = $('btn-start-game');
+    btn.disabled = true;
+    btn.textContent = 'CREATING ROOM…';
+
+    const room = await Multiplayer.createRoom();
+
+    btn.disabled = false;
+    btn.textContent = 'START GAME';
+
+    if (room) {
+      // Show codes screen so players can join before game begins
+      _showCodesScreen(n1, n2, room);
+    } else {
+      // Server not running — just start locally
+      _proceedToGame();
+    }
+  }
+
+  function _showCodesScreen(n1, n2, room) {
+    $('display-game-code').textContent = room.gameCode;
+    $('team1-link-display').textContent = room.team1Url;
+    $('team2-link-display').textContent = room.team2Url;
+
+    // Copy buttons
+    document.querySelectorAll('.btn-copy-link').forEach((btn) => {
+      btn.onclick = () => {
+        const url = btn.dataset.copy === 'team1' ? room.team1Url : room.team2Url;
+        navigator.clipboard.writeText(url).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = '✓ Copied!';
+          setTimeout(() => { btn.textContent = orig; }, 1800);
+        });
+      };
+    });
+
+    showScreen('codes-screen');
+    Multiplayer.connect();
+  }
+
+  function _proceedToGame() {
     updateTeamDisplays();
     showScreen('game-screen');
     Sounds.theme();
@@ -729,6 +779,10 @@
     $('btn-start-game').addEventListener('click', startGame);
     $('team1-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('team2-name-input').focus(); });
     $('team2-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') startGame(); });
+
+    // Codes screen
+    $('btn-proceed-game').addEventListener('click', _proceedToGame);
+    $('btn-skip-mp').addEventListener('click', _proceedToGame);
 
     // Game controls
     $('btn-start-round').addEventListener('click', startRound);

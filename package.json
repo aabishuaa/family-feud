@@ -1,0 +1,13 @@
+{
+  "name": "family-feud",
+  "version": "1.0.0",
+  "description": "Family Feud web game with multiplayer buzz-in",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0"
+  }
+}

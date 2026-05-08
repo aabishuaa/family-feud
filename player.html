@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Family Feud — Buzz!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --team1-color: #2a7de1;
+      --team1-glow:  #4a9fff;
+      --team2-color: #d44000;
+      --team2-glow:  #ff6a20;
+      --gold:        #ffd700;
+      --dark-bg:     #070d1f;
+      --card-bg:     #0d1730;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--dark-bg);
+      font-family: 'Oswald', sans-serif;
+      color: #fff;
+      touch-action: manipulation;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 20px;
+      min-height: 100dvh;
+    }
+
+    /* Stars */
+    .star {
+      position: fixed;
+      border-radius: 50%;
+      background: #fff;
+      opacity: 0;
+      animation: twinkle 3s ease-in-out infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Main card */
+    .player-card {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      z-index: 1;
+    }
+
+    /* Game logo */
+    .logo-mini {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(22px, 5vw, 30px);
+      letter-spacing: 0.15em;
+      color: var(--gold);
+      text-shadow: 0 0 20px rgba(255,215,0,0.5);
+    }
+
+    /* Team name */
+    .team-name {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(36px, 10vw, 64px);
+      letter-spacing: 0.08em;
+      text-align: center;
+      line-height: 1;
+      text-shadow: 0 0 30px currentColor;
+      transition: color 0.3s;
+    }
+    body.team0 .team-name { color: var(--team1-color); }
+    body.team1 .team-name { color: var(--team2-color); }
+
+    /* Status message */
+    .status-msg {
+      font-size: clamp(14px, 3.5vw, 20px);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #8899cc;
+      text-align: center;
+      min-height: 1.4em;
+      transition: color 0.3s;
+    }
+    .status-msg.ready { color: var(--gold); }
+    .status-msg.playing { color: #4cff91; }
+
+    /* Buzz button */
+    .buzz-wrap {
+      position: relative;
+      width: min(72vw, 300px);
+      height: min(72vw, 300px);
+    }
+
+    /* Pulse ring behind button */
+    .buzz-pulse {
+      position: absolute;
+      inset: -12px;
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    body.team0 .buzz-pulse { background: radial-gradient(circle, rgba(42,125,225,0.35) 0%, transparent 70%); }
+    body.team1 .buzz-pulse { background: radial-gradient(circle, rgba(212,64,0,0.35) 0%, transparent 70%); }
+
+    .buzz-btn {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(40px, 12vw, 72px);
+      letter-spacing: 0.1em;
+      color: #fff;
+      transition: transform 0.12s, box-shadow 0.3s, filter 0.3s;
+      position: relative;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body.team0 .buzz-btn {
+      background: radial-gradient(circle at 35% 35%, #5aaaff, var(--team1-color) 55%, #0a2a60);
+      box-shadow: 0 0 0 6px rgba(42,125,225,0.4), 0 8px 40px rgba(42,125,225,0.5), inset 0 -6px 20px rgba(0,0,50,0.4);
+    }
+    body.team1 .buzz-btn {
+      background: radial-gradient(circle at 35% 35%, #ff9860, var(--team2-color) 55%, #5a1200);
+      box-shadow: 0 0 0 6px rgba(212,64,0,0.4), 0 8px 40px rgba(212,64,0,0.5), inset 0 -6px 20px rgba(50,0,0,0.4);
+    }
+
+    /* Disabled state */
+    .buzz-btn:disabled {
+      filter: saturate(0.2) brightness(0.45);
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    .buzz-btn:disabled + .buzz-pulse,
+    .buzz-btn:disabled ~ .buzz-pulse { opacity: 0 !important; }
+
+    /* Active (enabled) pulse animation */
+    .buzz-btn:not(:disabled) ~ .buzz-pulse {
+      opacity: 1;
+      animation: pulse-ring 1.6s ease-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%   { transform: scale(0.92); opacity: 0.6; }
+      60%  { transform: scale(1.08); opacity: 0.2; }
+      100% { transform: scale(1.12); opacity: 0; }
+    }
+
+    /* Press feedback */
+    .buzz-btn:not(:disabled):active {
+      transform: scale(0.93);
+    }
+
+    /* Pressed flash */
+    .buzz-btn.pressed {
+      animation: buzz-flash 0.35s ease-out;
+    }
+    @keyframes buzz-flash {
+      0%   { transform: scale(0.90); filter: brightness(1.8); }
+      100% { transform: scale(1);    filter: brightness(1); }
+    }
+
+    /* Connection status bar */
+    .conn-bar {
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 6px 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.06);
+      color: #4a5a88;
+      transition: background 0.3s, color 0.3s;
+    }
+    .conn-bar.online  { background: rgba(0,220,80,0.12); color: #00dc50; }
+    .conn-bar.offline { background: rgba(220,60,0,0.12);  color: #ff5030; }
+
+    /* Loading / error state */
+    .loading-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      color: #4a5a88;
+      font-size: 16px;
+      letter-spacing: 0.1em;
+      text-align: center;
+    }
+    .loading-card .err { color: #ff4444; font-size: 14px; max-width: 280px; }
+  </style>
+</head>
+<body>
+
+  <div class="player-card" id="main-card">
+    <div class="logo-mini">FAMILY FEUD</div>
+    <div class="team-name" id="team-name">Loading…</div>
+    <div class="status-msg" id="status-msg">Connecting…</div>
+
+    <div class="buzz-wrap">
+      <button class="buzz-btn" id="buzz-btn" disabled>BUZZ!</button>
+      <div class="buzz-pulse"></div>
+    </div>
+
+    <div class="conn-bar" id="conn-bar">Connecting…</div>
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const gameCode = (params.get('game') || '').toUpperCase();
+      const team = Number(params.get('team'));
+
+      if (!gameCode || (team !== 0 && team !== 1)) {
+        document.getElementById('main-card').innerHTML =
+          '<div class="loading-card"><div class="logo-mini">FAMILY FEUD</div>' +
+          '<div class="err">Invalid link. Ask your host for the correct URL.</div></div>';
+        return;
+      }
+
+      // Apply team class to body for theming
+      document.body.classList.add(`team${team}`);
+
+      // ── Stars ────────────────────────────────────────────────
+      for (let i = 0; i < 80; i++) {
+        const s = document.createElement('div');
+        s.className = 'star';
+        s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;` +
+          `width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;` +
+          `animation-delay:${Math.random()*4}s;animation-duration:${2+Math.random()*3}s;`;
+        document.body.appendChild(s);
+      }
+
+      const teamNameEl = document.getElementById('team-name');
+      const statusEl   = document.getElementById('status-msg');
+      const buzzBtn    = document.getElementById('buzz-btn');
+      const connBar    = document.getElementById('conn-bar');
+
+      const phaseMessages = {
+        intro:     'Waiting for game to start…',
+        setup:     'Get ready — round starting soon!',
+        faceoff:   'BUZZ IN NOW!',
+        playing:   'Round in progress…',
+        steal:     'Steal attempt!',
+        revealAll: 'Revealing answers…',
+        roundEnd:  'Round over!',
+        fastMoney: 'Fast Money round!',
+        gameEnd:   'Game over!',
+      };
+
+      let currentPhase = 'intro';
+      let buzzerActive = false;
+
+      function applyState(phase, active) {
+        currentPhase = phase || currentPhase;
+        buzzerActive = active;
+
+        buzzBtn.disabled = !buzzerActive;
+        statusEl.textContent = phaseMessages[currentPhase] || 'Waiting…';
+
+        statusEl.classList.toggle('ready', currentPhase === 'faceoff');
+        statusEl.classList.toggle('playing', currentPhase === 'playing');
+      }
+
+      // ── WebSocket ────────────────────────────────────────────
+      let ws = null;
+      let reconnectDelay = 1500;
+
+      function connect() {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${proto}://${location.host}`);
+
+        ws.onopen = () => {
+          reconnectDelay = 1500;
+          ws.send(JSON.stringify({ type: 'join', gameCode, role: 'player', team }));
+        };
+
+        ws.onmessage = (e) => {
+          let msg;
+          try { msg = JSON.parse(e.data); } catch { return; }
+
+          if (msg.type === 'error') {
+            connBar.textContent = msg.message;
+            connBar.className = 'conn-bar offline';
+            statusEl.textContent = msg.message;
+            buzzBtn.disabled = true;
+            return;
+          }
+
+          if (msg.type === 'joined') {
+            const tName = msg.teamName || `Team ${team + 1}`;
+            teamNameEl.textContent = tName;
+            document.title = `${tName} — Buzz!`;
+            connBar.textContent = '● Connected';
+            connBar.className = 'conn-bar online';
+            applyState(msg.phase, msg.buzzerActive);
+          }
+
+          if (msg.type === 'game-event') {
+            if (Array.isArray(msg.teamNames)) {
+              teamNameEl.textContent = msg.teamNames[team] || teamNameEl.textContent;
+            }
+            applyState(msg.phase, msg.buzzerActive);
+          }
+        };
+
+        ws.onclose = () => {
+          connBar.textContent = 'Reconnecting…';
+          connBar.className = 'conn-bar offline';
+          buzzBtn.disabled = true;
+          setTimeout(connect, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
+        };
+
+        ws.onerror = () => {};
+      }
+
+      connect();
+
+      // ── Buzz handler ─────────────────────────────────────────
+      buzzBtn.addEventListener('click', () => {
+        if (ws?.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({ type: 'buzz', team }));
+        buzzBtn.classList.add('pressed');
+        buzzBtn.disabled = true; // prevent double-buzz
+        setTimeout(() => buzzBtn.classList.remove('pressed'), 350);
+      });
+
+      // Keyboard space / enter to buzz (for accessibility)
+      document.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          if (!buzzBtn.disabled) buzzBtn.click();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
