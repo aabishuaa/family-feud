@@ -5,12 +5,12 @@
 (function () {
   'use strict';
 
-  // ── Helpers ────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const $q = (sel, ctx = document) => ctx.querySelector(sel);
   const $all = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
-  // ── State ──────────────────────────────────────────────────
+  // ── State ────────────────────────────────────────────────────────
   const state = {
     phase: 'intro',      // intro | setup | faceoff | playing | steal | revealAll | roundEnd | fastMoney | gameEnd
     round: 0,            // 0-based index into GAME_DATA.rounds
@@ -33,21 +33,27 @@
     confettiAnimId: null,
   };
 
-  // ── Phase transition ───────────────────────────────────────
+  // ── Phase transition ───────────────────────────────────────────────
   function setPhase(phase) {
     state.phase = phase;
     document.body.dataset.phase = phase;
     updateControlButtons();
     updateStatusBar();
+    // Broadcast to connected player phones
+    Multiplayer.broadcast({
+      phase,
+      buzzerActive: phase === 'faceoff',
+      teamNames: [state.teams[0].name, state.teams[1].name],
+    });
   }
 
-  // ── Screen management ──────────────────────────────────────
+  // ── Screen management ────────────────────────────────────────────
   function showScreen(id) {
     $all('.screen').forEach((s) => s.classList.remove('active'));
     $(id).classList.add('active');
   }
 
-  // ── Shuffle helper ─────────────────────────────────────────
+  // ── Shuffle helper ─────────────────────────────────────────────────
   function shuffle(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -57,8 +63,8 @@
     return a;
   }
 
-  // ── START GAME ─────────────────────────────────────────────
-  function startGame() {
+  // ── START GAME ─────────────────────────────────────────────────────
+  async function startGame() {
     Sounds.init();
     const n1 = $('team1-name-input').value.trim() || 'Team 1';
     const n2 = $('team2-name-input').value.trim() || 'Team 2';
@@ -67,6 +73,50 @@
     state.round = 0;
     state.usedRounds = shuffle([...Array(GAME_DATA.rounds.length).keys()]);
 
+    // Register buzz handler so player phones can trigger buzz-in
+    Multiplayer.setOnBuzz((teamIdx) => buzzIn(teamIdx));
+
+    // Try to create a multiplayer room via the server
+    const btn = $('btn-start-game');
+    btn.disabled = true;
+    btn.textContent = 'CREATING ROOM…';
+
+    const room = await Multiplayer.createRoom();
+
+    btn.disabled = false;
+    btn.textContent = 'START GAME';
+
+    if (room) {
+      // Show codes screen so players can join before game begins
+      _showCodesScreen(n1, n2, room);
+    } else {
+      // Server not running — just start locally
+      _proceedToGame();
+    }
+  }
+
+  function _showCodesScreen(n1, n2, room) {
+    $('display-game-code').textContent = room.gameCode;
+    $('team1-link-display').textContent = room.team1Url;
+    $('team2-link-display').textContent = room.team2Url;
+
+    // Copy buttons
+    document.querySelectorAll('.btn-copy-link').forEach((btn) => {
+      btn.onclick = () => {
+        const url = btn.dataset.copy === 'team1' ? room.team1Url : room.team2Url;
+        navigator.clipboard.writeText(url).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = '✓ Copied!';
+          setTimeout(() => { btn.textContent = orig; }, 1800);
+        });
+      };
+    });
+
+    showScreen('codes-screen');
+    Multiplayer.connect();
+  }
+
+  function _proceedToGame() {
     updateTeamDisplays();
     showScreen('game-screen');
     Sounds.theme();
@@ -75,7 +125,7 @@
     updateStatusBar('Press START ROUND to begin Round 1!');
   }
 
-  // ── ROUND SETUP ────────────────────────────────────────────
+  // ── ROUND SETUP ────────────────────────────────────────────────────
   function startRound() {
     if (state.phase !== 'setup') return;
     // After all rounds are done, Start Round button launches fast money
@@ -123,7 +173,7 @@
     }, 1800);
   }
 
-  // ── BOARD BUILDING ─────────────────────────────────────────
+  // ── BOARD BUILDING ───────────────────────────────────────────────────
   function buildBoard(answers) {
     const board = $('answer-board');
     board.innerHTML = '';
@@ -157,7 +207,7 @@
     });
   }
 
-  // ── REVEAL ANSWER ──────────────────────────────────────────
+  // ── REVEAL ANSWER ──────────────────────────────────────────────────────
   function revealAnswer(ansId) {
     if (state.revealedAnswers.has(ansId)) return;
 
@@ -189,7 +239,7 @@
     }
   }
 
-  // ── REVEAL ALL REMAINING ───────────────────────────────────
+  // ── REVEAL ALL REMAINING ───────────────────────────────────────────────
   function revealAllAnswers() {
     if (state.phase !== 'playing' && state.phase !== 'steal' && state.phase !== 'revealAll') return;
     revealAndEnd(state.activeTeam);
@@ -217,7 +267,7 @@
     setTimeout(() => endRound(winnerIdx), delay + 1000);
   }
 
-  // ── ADD STRIKE ─────────────────────────────────────────────
+  // ── ADD STRIKE ────────────────────────────────────────────────────────
   function addStrike() {
     if (state.phase !== 'playing') return;
     if (state.strikes >= GAME_DATA.settings.maxStrikes) return;
@@ -242,7 +292,7 @@
     }
   }
 
-  // ── STEAL CORRECT ──────────────────────────────────────────
+  // ── STEAL CORRECT ────────────────────────────────────────────────────
   function stealCorrect(ansId) {
     if (state.phase !== 'steal') return;
     if (ansId) revealAnswer(ansId);
@@ -252,7 +302,7 @@
     setTimeout(() => revealAndEnd(winner), 2200);
   }
 
-  // ── STEAL WRONG ────────────────────────────────────────────
+  // ── STEAL WRONG ──────────────────────────────────────────────────────
   function stealWrong() {
     if (state.phase !== 'steal') return;
     Sounds.stealFail();
@@ -261,7 +311,7 @@
     setTimeout(() => revealAndEnd(winner), 2200);
   }
 
-  // ── PASS CONTROL ───────────────────────────────────────────
+  // ── PASS CONTROL ──────────────────────────────────────────────────────
   function passControl() {
     if (state.phase !== 'playing') return;
     state.activeTeam = 1 - state.activeTeam;
@@ -269,7 +319,7 @@
     updateStatusBar(`${state.teams[state.activeTeam].name} is now playing!`);
   }
 
-  // ── END ROUND ──────────────────────────────────────────────
+  // ── END ROUND ────────────────────────────────────────────────────────
   function endRound(winnerTeamIdx) {
     setPhase('roundEnd');
     const pts = state.roundPoints;
@@ -303,7 +353,7 @@
     }, 2800);
   }
 
-  // ── STRIKES ────────────────────────────────────────────────
+  // ── STRIKES ────────────────────────────────────────────────────────
   function resetStrikes() {
     state.strikes = 0;
     renderStrikes();
@@ -322,7 +372,7 @@
     setTimeout(() => slot.classList.remove('flash'), 600);
   }
 
-  // ── TEAM DISPLAY ───────────────────────────────────────────
+  // ── TEAM DISPLAY ──────────────────────────────────────────────────────
   function updateTeamDisplays() {
     ['team1', 'team2'].forEach((prefix, i) => {
       $(`${prefix}-name-display`).textContent = state.teams[i].name;
@@ -345,7 +395,7 @@
     $('team2-active-badge').classList.add('hidden');
   }
 
-  // ── BUZZ IN ────────────────────────────────────────────────
+  // ── BUZZ IN ────────────────────────────────────────────────────────
   function buzzIn(teamIdx) {
     if (state.phase !== 'faceoff') return;
     Sounds.buzzIn();
@@ -356,7 +406,7 @@
     updateStatusBar(`${state.teams[teamIdx].name} buzzes in! Click a tile to reveal!`);
   }
 
-  // ── STATUS BAR ─────────────────────────────────────────────
+  // ── STATUS BAR ──────────────────────────────────────────────────────
   const statusMessages = {
     intro:     '',
     setup:     'Press START ROUND to begin!',
@@ -373,7 +423,7 @@
     $('status-message').textContent = msg || statusMessages[state.phase] || '';
   }
 
-  // ── CONTROL BUTTONS ────────────────────────────────────────
+  // ── CONTROL BUTTONS ───────────────────────────────────────────────────
   function updateControlButtons() {
     const p = state.phase;
     const isPlaying = p === 'playing';
@@ -392,7 +442,7 @@
     $('team2-buzz-btn').disabled   = !isFaceoff;
   }
 
-  // ── OVERLAY ────────────────────────────────────────────────
+  // ── OVERLAY ────────────────────────────────────────────────────────
   function showOverlay(text, duration = 2000) {
     const overlay = $('game-overlay');
     const textEl  = $('overlay-text');
@@ -406,7 +456,7 @@
     }, duration);
   }
 
-  // ── ANIMATIONS ─────────────────────────────────────────────
+  // ── ANIMATIONS ───────────────────────────────────────────────────────
   function animatePointsCounter(el, target) {
     const start = parseInt(el.textContent) || 0;
     const diff  = target - start;
@@ -446,7 +496,7 @@
     setTimeout(() => bubble.remove(), 1000);
   }
 
-  // ── STARFIELD ──────────────────────────────────────────────
+  // ── STARFIELD ────────────────────────────────────────────────────────
   function createStarfield() {
     const container = $('stars-container');
     if (!container) return;
@@ -466,7 +516,7 @@
     }
   }
 
-  // ── CONFETTI ───────────────────────────────────────────────
+  // ── CONFETTI ────────────────────────────────────────────────────────
   function launchConfetti() {
     const canvas = $('confetti-canvas');
     if (!canvas) return;
@@ -512,7 +562,7 @@
     }, 5000);
   }
 
-  // ── FAST MONEY ─────────────────────────────────────────────
+  // ── FAST MONEY ───────────────────────────────────────────────────────
   function startFastMoney() {
     // Determine winning team by score so far
     const winnerIdx = state.teams[0].score >= state.teams[1].score ? 0 : 1;
@@ -664,7 +714,7 @@
     setTimeout(() => showEndScreen(), 3000);
   }
 
-  // ── GAME END ───────────────────────────────────────────────
+  // ── GAME END ────────────────────────────────────────────────────────
   function showEndScreen() {
     const t0 = state.teams[0].score;
     const t1 = state.teams[1].score;
@@ -695,13 +745,13 @@
     setPhase('intro');
   }
 
-  // ── MUTE TOGGLE ────────────────────────────────────────────
+  // ── MUTE TOGGLE ──────────────────────────────────────────────────────
   function toggleMute() {
     const muted = Sounds.toggleMute();
     $('btn-mute').textContent = muted ? '🔇' : '🔊';
   }
 
-  // ── KEYBOARD SHORTCUTS ─────────────────────────────────────
+  // ── KEYBOARD SHORTCUTS ───────────────────────────────────────────────
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT') return;
     const key = e.key.toLowerCase();
@@ -723,12 +773,16 @@
     if (key === 'm') toggleMute();
   });
 
-  // ── EVENT WIRING ───────────────────────────────────────────
+  // ── EVENT WIRING ──────────────────────────────────────────────────────
   function init() {
     // Intro
     $('btn-start-game').addEventListener('click', startGame);
     $('team1-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('team2-name-input').focus(); });
     $('team2-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') startGame(); });
+
+    // Codes screen
+    $('btn-proceed-game').addEventListener('click', _proceedToGame);
+    $('btn-skip-mp').addEventListener('click', _proceedToGame);
 
     // Game controls
     $('btn-start-round').addEventListener('click', startRound);
@@ -758,7 +812,6 @@
 
     // Steal controls for specific tile — any revealed tile click during steal counts as stealCorrect
     $('btn-steal-correct').addEventListener('click', () => {
-      // Find first unrevealed answer to use as a placeholder (host taps the tile)
       stealCorrect(null);
     });
 
