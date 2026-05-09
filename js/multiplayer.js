@@ -18,9 +18,13 @@ const Multiplayer = (() => {
   let onBuzz = null;
 
   // ── Room creation ─────────────────────────────────────────
-  async function createRoom() {
+  async function createRoom(packId) {
     try {
-      const res = await fetch('/api/create-game', { method: 'POST' });
+      const res = await fetch('/api/create-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packId: packId || 'default' }),
+      });
       if (!res.ok) throw new Error('Server unavailable');
       const data = await res.json();
       gameCode  = data.gameCode;
@@ -100,6 +104,11 @@ const Multiplayer = (() => {
       s1.textContent = playerOnline[1] ? '● Connected' : '○ Waiting for player…';
       s1.classList.toggle('mp-connected', playerOnline[1]);
     }
+
+    const g0 = document.getElementById('team1-link-group');
+    const g1 = document.getElementById('team2-link-group');
+    if (g0) g0.classList.toggle('is-connected', playerOnline[0]);
+    if (g1) g1.classList.toggle('is-connected', playerOnline[1]);
   }
 
   // ── Public API ────────────────────────────────────────────

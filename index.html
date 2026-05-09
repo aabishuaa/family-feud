@@ -16,7 +16,7 @@
 
   <!-- ═══════════════════════════════════════════════════════
        INTRO SCREEN
-  ════════════════════════════════════════════════════════ -->
+  ════════════════════════════════════════════════════════════ -->
   <div id="intro-screen" class="screen active">
     <div class="intro-logo">
       <div class="logo-family">FAMILY</div>
@@ -53,6 +53,16 @@
         </div>
       </div>
 
+      <div class="mode-picker">
+        <div class="mode-picker-header">
+          <span class="mode-picker-label">CHOOSE A GAME MODE</span>
+          <a href="admin.html" class="mode-manage-link">⚙ Manage Modes</a>
+        </div>
+        <div class="mode-grid" id="mode-grid">
+          <div class="mode-loading">Loading game modes…</div>
+        </div>
+      </div>
+
       <button class="btn-primary" id="btn-start-game">START GAME</button>
 
       <div style="font-size:12px;letter-spacing:.12em;color:#4a5a88;text-align:center;margin-top:8px;">
@@ -63,7 +73,7 @@
 
   <!-- ═══════════════════════════════════════════════════════
        CODES SCREEN (multiplayer room setup)
-  ════════════════════════════════════════════════════════ -->
+  ════════════════════════════════════════════════════════════ -->
   <div id="codes-screen" class="screen">
     <div class="intro-logo" style="margin-bottom:16px;">
       <div class="logo-family">FAMILY</div>
@@ -110,7 +120,7 @@
 
   <!-- ═══════════════════════════════════════════════════════
        MAIN GAME SCREEN
-  ════════════════════════════════════════════════════════ -->
+  ════════════════════════════════════════════════════════════ -->
   <div id="game-screen" class="screen">
 
     <!-- ── Header ── -->
@@ -128,6 +138,7 @@
           <span class="pts-value" id="running-points">0</span>
           <span class="hidden" id="multiplier-badge">×1</span>
         </div>
+        <a href="admin.html" class="header-link" title="Manage game modes" target="_blank" rel="noopener">⚙</a>
         <button id="btn-mute" title="Toggle Sound (M)">🔊</button>
       </div>
     </header>
@@ -187,6 +198,16 @@
 
     </main>
 
+    <!-- ── Host Answer Cheat Sheet ── -->
+    <div id="cheatsheet" class="hidden">
+      <div class="cs-head">
+        <span class="cs-title">★ HOST ANSWER SHEET</span>
+        <button class="cs-toggle" id="cs-toggle" title="Hide / show">▾</button>
+      </div>
+      <div class="cs-hint">Tap an answer to reveal it on the board.</div>
+      <div id="cheatsheet-list" class="cs-list"></div>
+    </div>
+
     <!-- ── Status Bar ── -->
     <div id="status-bar">
       <span id="status-message">Click START GAME to play!</span>
@@ -210,7 +231,7 @@
 
   <!-- ═══════════════════════════════════════════════════════
        FAST MONEY SCREEN
-  ════════════════════════════════════════════════════════ -->
+  ════════════════════════════════════════════════════════════ -->
   <div id="fast-money-screen" class="screen">
 
     <div class="fm-header">
@@ -292,7 +313,7 @@
 
   <!-- ═══════════════════════════════════════════════════════
        END SCREEN
-  ════════════════════════════════════════════════════════ -->
+  ════════════════════════════════════════════════════════════ -->
   <div id="end-screen" class="screen">
     <canvas id="confetti-canvas"></canvas>
     <div class="end-content">
@@ -317,7 +338,7 @@
 
   <!-- ═══════════════════════════════════════════════════════
        GAME OVERLAY (announcements)
-  ════════════════════════════════════════════════════════ -->
+  ════════════════════════════════════════════════════════════ -->
   <div id="game-overlay">
     <div id="overlay-content">
       <div id="overlay-text"></div>

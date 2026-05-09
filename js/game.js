@@ -5,12 +5,12 @@
 (function () {
   'use strict';
 
-  // ── Helpers ────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
   const $q = (sel, ctx = document) => ctx.querySelector(sel);
   const $all = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
-  // ── State ────────────────────────────────────────────────────────
+  // ── State ──────────────────────────────────────────────────
   const state = {
     phase: 'intro',      // intro | setup | faceoff | playing | steal | revealAll | roundEnd | fastMoney | gameEnd
     round: 0,            // 0-based index into GAME_DATA.rounds
@@ -31,9 +31,11 @@
     fmTimeLeft: 0,
     fmCurrentQ: 0,
     confettiAnimId: null,
+    selectedPackId: 'default',
+    availablePacks: [],
   };
 
-  // ── Phase transition ───────────────────────────────────────────────
+  // ── Phase transition ───────────────────────────────────────
   function setPhase(phase) {
     state.phase = phase;
     document.body.dataset.phase = phase;
@@ -47,13 +49,13 @@
     });
   }
 
-  // ── Screen management ────────────────────────────────────────────
+  // ── Screen management ──────────────────────────────────────
   function showScreen(id) {
     $all('.screen').forEach((s) => s.classList.remove('active'));
     $(id).classList.add('active');
   }
 
-  // ── Shuffle helper ─────────────────────────────────────────────────
+  // ── Shuffle helper ─────────────────────────────────────────
   function shuffle(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -63,7 +65,7 @@
     return a;
   }
 
-  // ── START GAME ─────────────────────────────────────────────────────
+  // ── START GAME ─────────────────────────────────────────────
   async function startGame() {
     Sounds.init();
     const n1 = $('team1-name-input').value.trim() || 'Team 1';
@@ -71,17 +73,27 @@
     state.teams[0] = { name: n1, score: 0 };
     state.teams[1] = { name: n2, score: 0 };
     state.round = 0;
+
+    const btn = $('btn-start-game');
+    btn.disabled = true;
+    btn.textContent = 'LOADING…';
+
+    // Load the selected pack as the active GAME_DATA
+    const ok = await loadSelectedPack();
+    if (!ok) {
+      btn.disabled = false;
+      btn.textContent = 'START GAME';
+      return;
+    }
+
     state.usedRounds = shuffle([...Array(GAME_DATA.rounds.length).keys()]);
 
     // Register buzz handler so player phones can trigger buzz-in
     Multiplayer.setOnBuzz((teamIdx) => buzzIn(teamIdx));
 
     // Try to create a multiplayer room via the server
-    const btn = $('btn-start-game');
-    btn.disabled = true;
     btn.textContent = 'CREATING ROOM…';
-
-    const room = await Multiplayer.createRoom();
+    const room = await Multiplayer.createRoom(state.selectedPackId);
 
     btn.disabled = false;
     btn.textContent = 'START GAME';
@@ -125,7 +137,7 @@
     updateStatusBar('Press START ROUND to begin Round 1!');
   }
 
-  // ── ROUND SETUP ────────────────────────────────────────────────────
+  // ── ROUND SETUP ────────────────────────────────────────────
   function startRound() {
     if (state.phase !== 'setup') return;
     // After all rounds are done, Start Round button launches fast money
@@ -154,6 +166,7 @@
     $('question-text').classList.remove('hidden');
 
     buildBoard(state.currentRound.answers);
+    buildCheatSheet(state.currentRound);
     resetStrikes();
     clearActiveTeam();
     updateTeamDisplays();
@@ -173,7 +186,7 @@
     }, 1800);
   }
 
-  // ── BOARD BUILDING ───────────────────────────────────────────────────
+  // ── BOARD BUILDING ─────────────────────────────────────────
   function buildBoard(answers) {
     const board = $('answer-board');
     board.innerHTML = '';
@@ -207,7 +220,7 @@
     });
   }
 
-  // ── REVEAL ANSWER ──────────────────────────────────────────────────────
+  // ── REVEAL ANSWER ──────────────────────────────────────────
   function revealAnswer(ansId) {
     if (state.revealedAnswers.has(ansId)) return;
 
@@ -216,6 +229,7 @@
 
     state.revealedAnswers.add(ansId);
     tile.classList.add('revealed');
+    updateCheatSheetState();
 
     const ans = state.currentRound.answers.find((a) => a.id === ansId);
     const pts = ans.points * state.multiplier;
@@ -239,7 +253,7 @@
     }
   }
 
-  // ── REVEAL ALL REMAINING ───────────────────────────────────────────────
+  // ── REVEAL ALL REMAINING ───────────────────────────────────
   function revealAllAnswers() {
     if (state.phase !== 'playing' && state.phase !== 'steal' && state.phase !== 'revealAll') return;
     revealAndEnd(state.activeTeam);
@@ -257,6 +271,8 @@
           if (tile) {
             tile.classList.add('revealed', 'dimmed');
             state.roundPoints += ans.points * state.multiplier;
+            state.revealedAnswers.add(ans.id);
+            updateCheatSheetState();
           }
         }, i * 300);
       }
@@ -267,7 +283,7 @@
     setTimeout(() => endRound(winnerIdx), delay + 1000);
   }
 
-  // ── ADD STRIKE ────────────────────────────────────────────────────────
+  // ── ADD STRIKE ─────────────────────────────────────────────
   function addStrike() {
     if (state.phase !== 'playing') return;
     if (state.strikes >= GAME_DATA.settings.maxStrikes) return;
@@ -292,7 +308,7 @@
     }
   }
 
-  // ── STEAL CORRECT ────────────────────────────────────────────────────
+  // ── STEAL CORRECT ──────────────────────────────────────────
   function stealCorrect(ansId) {
     if (state.phase !== 'steal') return;
     if (ansId) revealAnswer(ansId);
@@ -302,7 +318,7 @@
     setTimeout(() => revealAndEnd(winner), 2200);
   }
 
-  // ── STEAL WRONG ──────────────────────────────────────────────────────
+  // ── STEAL WRONG ────────────────────────────────────────────
   function stealWrong() {
     if (state.phase !== 'steal') return;
     Sounds.stealFail();
@@ -311,7 +327,7 @@
     setTimeout(() => revealAndEnd(winner), 2200);
   }
 
-  // ── PASS CONTROL ──────────────────────────────────────────────────────
+  // ── PASS CONTROL ───────────────────────────────────────────
   function passControl() {
     if (state.phase !== 'playing') return;
     state.activeTeam = 1 - state.activeTeam;
@@ -319,7 +335,7 @@
     updateStatusBar(`${state.teams[state.activeTeam].name} is now playing!`);
   }
 
-  // ── END ROUND ────────────────────────────────────────────────────────
+  // ── END ROUND ──────────────────────────────────────────────
   function endRound(winnerTeamIdx) {
     setPhase('roundEnd');
     const pts = state.roundPoints;
@@ -353,7 +369,7 @@
     }, 2800);
   }
 
-  // ── STRIKES ────────────────────────────────────────────────────────
+  // ── STRIKES ────────────────────────────────────────────────
   function resetStrikes() {
     state.strikes = 0;
     renderStrikes();
@@ -372,7 +388,7 @@
     setTimeout(() => slot.classList.remove('flash'), 600);
   }
 
-  // ── TEAM DISPLAY ──────────────────────────────────────────────────────
+  // ── TEAM DISPLAY ───────────────────────────────────────────
   function updateTeamDisplays() {
     ['team1', 'team2'].forEach((prefix, i) => {
       $(`${prefix}-name-display`).textContent = state.teams[i].name;
@@ -395,7 +411,7 @@
     $('team2-active-badge').classList.add('hidden');
   }
 
-  // ── BUZZ IN ────────────────────────────────────────────────────────
+  // ── BUZZ IN ────────────────────────────────────────────────
   function buzzIn(teamIdx) {
     if (state.phase !== 'faceoff') return;
     Sounds.buzzIn();
@@ -406,7 +422,7 @@
     updateStatusBar(`${state.teams[teamIdx].name} buzzes in! Click a tile to reveal!`);
   }
 
-  // ── STATUS BAR ──────────────────────────────────────────────────────
+  // ── STATUS BAR ─────────────────────────────────────────────
   const statusMessages = {
     intro:     '',
     setup:     'Press START ROUND to begin!',
@@ -423,7 +439,7 @@
     $('status-message').textContent = msg || statusMessages[state.phase] || '';
   }
 
-  // ── CONTROL BUTTONS ───────────────────────────────────────────────────
+  // ── CONTROL BUTTONS ────────────────────────────────────────
   function updateControlButtons() {
     const p = state.phase;
     const isPlaying = p === 'playing';
@@ -442,7 +458,7 @@
     $('team2-buzz-btn').disabled   = !isFaceoff;
   }
 
-  // ── OVERLAY ────────────────────────────────────────────────────────
+  // ── OVERLAY ────────────────────────────────────────────────
   function showOverlay(text, duration = 2000) {
     const overlay = $('game-overlay');
     const textEl  = $('overlay-text');
@@ -456,7 +472,7 @@
     }, duration);
   }
 
-  // ── ANIMATIONS ───────────────────────────────────────────────────────
+  // ── ANIMATIONS ─────────────────────────────────────────────
   function animatePointsCounter(el, target) {
     const start = parseInt(el.textContent) || 0;
     const diff  = target - start;
@@ -496,7 +512,7 @@
     setTimeout(() => bubble.remove(), 1000);
   }
 
-  // ── STARFIELD ────────────────────────────────────────────────────────
+  // ── STARFIELD ──────────────────────────────────────────────
   function createStarfield() {
     const container = $('stars-container');
     if (!container) return;
@@ -516,7 +532,7 @@
     }
   }
 
-  // ── CONFETTI ────────────────────────────────────────────────────────
+  // ── CONFETTI ───────────────────────────────────────────────
   function launchConfetti() {
     const canvas = $('confetti-canvas');
     if (!canvas) return;
@@ -562,8 +578,9 @@
     }, 5000);
   }
 
-  // ── FAST MONEY ───────────────────────────────────────────────────────
+  // ── FAST MONEY ─────────────────────────────────────────────
   function startFastMoney() {
+    clearCheatSheet();
     // Determine winning team by score so far
     const winnerIdx = state.teams[0].score >= state.teams[1].score ? 0 : 1;
     state.fmCurrentPlayer = 0;
@@ -714,7 +731,7 @@
     setTimeout(() => showEndScreen(), 3000);
   }
 
-  // ── GAME END ────────────────────────────────────────────────────────
+  // ── GAME END ───────────────────────────────────────────────
   function showEndScreen() {
     const t0 = state.teams[0].score;
     const t1 = state.teams[1].score;
@@ -741,17 +758,19 @@
     cancelAnimationFrame(state.confettiAnimId);
     const cc = $('confetti-canvas');
     if (cc) cc.getContext('2d').clearRect(0, 0, cc.width, cc.height);
+    clearCheatSheet();
     showScreen('intro-screen');
     setPhase('intro');
+    loadGameModes();
   }
 
-  // ── MUTE TOGGLE ──────────────────────────────────────────────────────
+  // ── MUTE TOGGLE ────────────────────────────────────────────
   function toggleMute() {
     const muted = Sounds.toggleMute();
     $('btn-mute').textContent = muted ? '🔇' : '🔊';
   }
 
-  // ── KEYBOARD SHORTCUTS ───────────────────────────────────────────────
+  // ── KEYBOARD SHORTCUTS ─────────────────────────────────────
   document.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT') return;
     const key = e.key.toLowerCase();
@@ -773,7 +792,7 @@
     if (key === 'm') toggleMute();
   });
 
-  // ── EVENT WIRING ──────────────────────────────────────────────────────
+  // ── EVENT WIRING ───────────────────────────────────────────
   function init() {
     // Intro
     $('btn-start-game').addEventListener('click', startGame);
@@ -812,6 +831,7 @@
 
     // Steal controls for specific tile — any revealed tile click during steal counts as stealCorrect
     $('btn-steal-correct').addEventListener('click', () => {
+      // Find first unrevealed answer to use as a placeholder (host taps the tile)
       stealCorrect(null);
     });
 
@@ -841,9 +861,146 @@
     // End screen
     $('btn-play-again').addEventListener('click', playAgain);
 
+    // Cheat-sheet collapse toggle
+    const csToggle = $('cs-toggle');
+    if (csToggle) {
+      csToggle.addEventListener('click', () => {
+        $('cheatsheet').classList.toggle('collapsed');
+        csToggle.textContent = $('cheatsheet').classList.contains('collapsed') ? '▴' : '▾';
+      });
+    }
+
     // Start in intro phase
     setPhase('intro');
     showScreen('intro-screen');
+
+    // Populate the game-mode picker
+    loadGameModes();
+  }
+
+  // ── GAME MODES (packs) ─────────────────────────────────────
+  async function loadGameModes() {
+    const grid = $('mode-grid');
+    if (!grid) return;
+    let list = [];
+    try {
+      const res = await fetch('/api/packs');
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      list = data.packs || [];
+    } catch {
+      // Server not running — use embedded seed packs as a read-only fallback
+      list = (window.GAME_PACK_SEEDS || []).map((p) => ({
+        id: p.id, name: p.name, icon: p.icon, builtIn: p.builtIn,
+        roundCount: p.rounds.length,
+        fmCount: p.fastMoneyRounds?.[0]?.questions?.length || 0,
+      }));
+    }
+    state.availablePacks = list;
+    renderModeGrid();
+  }
+
+  function renderModeGrid() {
+    const grid = $('mode-grid');
+    grid.innerHTML = '';
+    if (!state.availablePacks.length) {
+      grid.innerHTML = `<div class="mode-loading">No game modes — visit <a href="admin.html">Admin</a> to create one.</div>`;
+      return;
+    }
+    state.availablePacks.forEach((p) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'mode-card';
+      const isReady = p.roundCount > 0;
+      if (state.selectedPackId === p.id) card.classList.add('selected');
+      if (!isReady) card.classList.add('mode-empty');
+      card.innerHTML = `
+        <div class="mode-icon">${p.icon || '🎯'}</div>
+        <div class="mode-card-name">${escapeHtml(p.name)}</div>
+        <div class="mode-card-meta">${p.roundCount} round${p.roundCount === 1 ? '' : 's'}${p.builtIn ? ' · built-in' : ''}</div>
+        ${!isReady ? '<div class="mode-empty-tag">Empty — add questions in Admin</div>' : ''}
+      `;
+      card.addEventListener('click', () => selectMode(p.id));
+      grid.appendChild(card);
+    });
+  }
+
+  function selectMode(id) {
+    state.selectedPackId = id;
+    renderModeGrid();
+  }
+
+  // Fetches full pack data and replaces GAME_DATA. Returns true on success.
+  async function loadSelectedPack() {
+    const id = state.selectedPackId;
+    try {
+      const res = await fetch(`/api/packs/${id}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      // Reject packs with no rounds — game cannot start
+      if (!data.pack?.rounds?.length) {
+        alert(`The "${data.pack?.name || id}" mode has no questions yet. Add some in the Admin panel first.`);
+        return false;
+      }
+      window.GAME_DATA = data.pack;
+      return true;
+    } catch {
+      // Fallback to seed
+      const seed = (window.GAME_PACK_SEEDS || []).find((p) => p.id === id);
+      if (!seed || !seed.rounds.length) {
+        alert('Could not load this game mode. Add questions in the Admin panel.');
+        return false;
+      }
+      window.GAME_DATA = JSON.parse(JSON.stringify(seed));
+      return true;
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
+  // ── HOST CHEAT SHEET ───────────────────────────────────────
+  // Floating panel on the host's screen showing all answers with reveal buttons.
+  function buildCheatSheet(round) {
+    const list = $('cheatsheet-list');
+    if (!list) return;
+    list.innerHTML = '';
+    round.answers.forEach((ans, i) => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'cs-row';
+      row.dataset.ansId = ans.id;
+      row.innerHTML = `
+        <span class="cs-rank">${i + 1}</span>
+        <span class="cs-text">${escapeHtml(ans.text)}</span>
+        <span class="cs-pts">${ans.points * state.multiplier}</span>
+      `;
+      row.addEventListener('click', () => {
+        if (state.phase === 'playing' || state.phase === 'steal') {
+          revealAnswer(ans.id);
+        }
+      });
+      list.appendChild(row);
+    });
+    $('cheatsheet').classList.remove('hidden');
+    updateCheatSheetState();
+  }
+
+  function updateCheatSheetState() {
+    const list = $('cheatsheet-list');
+    if (!list) return;
+    list.querySelectorAll('.cs-row').forEach((row) => {
+      const id = Number(row.dataset.ansId);
+      row.classList.toggle('revealed', state.revealedAnswers.has(id));
+    });
+  }
+
+  function clearCheatSheet() {
+    const cs = $('cheatsheet');
+    if (cs) cs.classList.add('hidden');
   }
 
   // Boot

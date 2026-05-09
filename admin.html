@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Feud — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin-body">
+
+  <div id="stars-container"></div>
+
+  <header class="admin-header">
+    <div class="admin-brand">
+      <div class="admin-logo">
+        <span class="admin-logo-family">FAMILY</span>
+        <span class="admin-logo-feud">FEUD</span>
+      </div>
+      <div class="admin-tag">ADMIN</div>
+    </div>
+    <nav class="admin-nav">
+      <a href="index.html" class="admin-link">← Back to Game</a>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+
+    <!-- LEFT: Pack list -->
+    <aside class="admin-sidebar">
+      <div class="admin-section-title">GAME MODES</div>
+      <div id="pack-list" class="pack-list">
+        <div class="pack-list-empty">Loading…</div>
+      </div>
+      <button id="btn-new-pack" class="btn-admin btn-primary-admin">＋ NEW MODE</button>
+    </aside>
+
+    <!-- RIGHT: Editor -->
+    <section class="admin-editor" id="editor">
+      <div class="editor-empty" id="editor-empty">
+        <div class="editor-empty-icon">📝</div>
+        <div class="editor-empty-title">Select a Game Mode</div>
+        <div class="editor-empty-hint">Pick a mode on the left to view or edit its questions, or create a new one.</div>
+      </div>
+
+      <div class="editor-content hidden" id="editor-content">
+
+        <!-- Pack header -->
+        <div class="editor-head">
+          <div class="editor-meta">
+            <div class="editor-meta-row">
+              <input type="text" id="pack-icon" class="input-icon" maxlength="3" placeholder="🎯">
+              <input type="text" id="pack-name" class="input-pack-name" maxlength="40" placeholder="Mode name">
+            </div>
+            <div class="editor-stats" id="editor-stats">— rounds · — fast money</div>
+          </div>
+          <div class="editor-actions">
+            <button class="btn-admin btn-ghost"  id="btn-cancel">↻ RELOAD</button>
+            <button class="btn-admin btn-danger" id="btn-delete">🗑 DELETE</button>
+            <button class="btn-admin btn-save"   id="btn-save">💾 SAVE CHANGES</button>
+          </div>
+        </div>
+
+        <div id="readonly-banner" class="readonly-banner hidden">
+          🔒 This is a built-in pack. Make a copy with the “Duplicate” button to edit your own version.
+          <button class="btn-admin btn-ghost-small" id="btn-duplicate">DUPLICATE</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="editor-tabs">
+          <button class="tab-btn active" data-tab="rounds">MAIN ROUNDS</button>
+          <button class="tab-btn"        data-tab="fastmoney">FAST MONEY</button>
+          <button class="tab-btn"        data-tab="settings">SETTINGS</button>
+        </div>
+
+        <!-- Rounds tab -->
+        <div class="tab-panel active" data-tab-panel="rounds">
+          <div id="rounds-container" class="rounds-container"></div>
+          <button class="btn-admin btn-add-round" id="btn-add-round">＋ ADD ROUND</button>
+        </div>
+
+        <!-- Fast Money tab -->
+        <div class="tab-panel" data-tab-panel="fastmoney">
+          <div class="fm-help">Fast Money rounds — up to 5 short questions with 5 answers each, surveyed-style.</div>
+          <div id="fm-container" class="fm-container"></div>
+          <button class="btn-admin btn-add-round" id="btn-add-fm">＋ ADD FAST MONEY QUESTION</button>
+        </div>
+
+        <!-- Settings tab -->
+        <div class="tab-panel" data-tab-panel="settings">
+          <div class="settings-grid">
+            <label class="setting-row">
+              <span>Total Rounds in Game</span>
+              <input type="number" id="set-total-rounds" min="1" max="6" value="3">
+              <span class="setting-hint">How many rounds before Fast Money</span>
+            </label>
+            <label class="setting-row">
+              <span>Max Strikes</span>
+              <input type="number" id="set-max-strikes" min="1" max="5" value="3">
+              <span class="setting-hint">Wrong answers before steal</span>
+            </label>
+            <label class="setting-row">
+              <span>Round Multipliers</span>
+              <input type="text" id="set-multipliers" value="1, 2, 3" placeholder="1, 2, 3">
+              <span class="setting-hint">Comma-separated, one per round</span>
+            </label>
+            <label class="setting-row">
+              <span>Fast Money Target</span>
+              <input type="number" id="set-fm-target" min="50" max="500" value="200">
+              <span class="setting-hint">Points needed to win</span>
+            </label>
+            <label class="setting-row">
+              <span>Player 1 Time (sec)</span>
+              <input type="number" id="set-fm-time1" min="5" max="120" value="20">
+              <span class="setting-hint">Fast Money clock for player 1</span>
+            </label>
+            <label class="setting-row">
+              <span>Player 2 Time (sec)</span>
+              <input type="number" id="set-fm-time2" min="5" max="120" value="25">
+              <span class="setting-hint">Fast Money clock for player 2</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Confirm modal -->
+  <div id="confirm-overlay" class="confirm-overlay hidden">
+    <div class="confirm-card">
+      <div class="confirm-title" id="confirm-title">Are you sure?</div>
+      <div class="confirm-msg"   id="confirm-msg"></div>
+      <div class="confirm-actions">
+        <button class="btn-admin btn-ghost"  id="confirm-cancel">CANCEL</button>
+        <button class="btn-admin btn-danger" id="confirm-ok">CONFIRM</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

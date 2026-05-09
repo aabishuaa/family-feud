@@ -65,7 +65,7 @@ body::before {
     linear-gradient(170deg, #030c24 0%, #091240 55%, #040c1e 100%);
 }
 
-/* Stage light rays */
+/* Stage light rays — subtle cones behind the board */
 body::after {
   content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
@@ -85,6 +85,7 @@ body::after {
   50%       { opacity: .9;  transform: scale(1.5); }
 }
 
+/* z-index above background */
 #intro-screen, #game-screen,
 #fast-money-screen, #end-screen,
 #game-overlay { z-index: 2; }
@@ -263,6 +264,7 @@ body::after {
 }
 #team2-panel { border-right: none; border-left: 1px solid rgba(255,255,255,.05); }
 
+/* Active-team: vivid side glow + brightened background */
 #team1-panel.active-team {
   background: linear-gradient(180deg,
     rgba(20,50,160,.7) 0%,
@@ -280,6 +282,7 @@ body::after {
               -6px 0 40px rgba(255,69,0,.12);
 }
 
+/* Top accent bar */
 .team-panel::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0;
@@ -312,6 +315,7 @@ body::after {
   text-shadow: 0 0 16px rgba(255,69,0,.55);
 }
 
+/* Score */
 .team-score-box { display: flex; flex-direction: column; align-items: center; gap: 0; }
 .score-label {
   font-size: 10px; letter-spacing: .22em;
@@ -340,6 +344,7 @@ body::after {
   100% { color: var(--white); transform: scale(1); }
 }
 
+/* Buzz Buttons */
 .buzz-button {
   width: 140px; height: 140px;
   border-radius: 50%; border: none; cursor: pointer;
@@ -348,6 +353,7 @@ body::after {
   font-family: 'Bebas Neue', sans-serif;
   transition: transform .12s, box-shadow .2s, filter .2s;
   position: relative;
+  /* 3-D inset look */
   outline: 4px solid transparent;
   outline-offset: 3px;
 }
@@ -415,6 +421,7 @@ body::after {
   gap: 8px; min-width: 0;
 }
 
+/* Question banner */
 #question-banner {
   width: 100%; max-width: 860px;
   background: linear-gradient(90deg,
@@ -434,9 +441,10 @@ body::after {
 }
 #question-text.hidden { visibility: hidden; }
 
+/* Board frame — the main visual hero */
 #board-frame {
   width: 100%; max-width: 860px;
-  flex: 1; min-height: 0;
+  flex: 1; min-height: 0; /* stretch vertically */
   display: flex; flex-direction: column;
   background: linear-gradient(160deg, #0a1c6a 0%, #060e42 60%, #04092e 100%);
   border: 4px solid var(--gold-dark);
@@ -449,6 +457,7 @@ body::after {
     inset 0 0 60px rgba(255,215,0,.04),
     inset 0 0 1px rgba(255,255,255,.06);
 }
+/* Inner accent border */
 #board-frame::before {
   content: '';
   position: absolute; inset: 6px;
@@ -456,6 +465,7 @@ body::after {
   border: 1px solid rgba(255,215,0,.18);
   pointer-events: none;
 }
+/* Corner decorations */
 #board-frame::after {
   content: '★  ★  ★';
   position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
@@ -464,6 +474,7 @@ body::after {
   pointer-events: none;
 }
 
+/* Board title */
 #board-title {
   font-family: 'Bebas Neue', sans-serif;
   font-size: clamp(24px, 3.8vw, 40px);
@@ -476,6 +487,7 @@ body::after {
   flex-shrink: 0;
 }
 
+/* Answer board grid */
 #answer-board {
   display: grid;
   gap: 10px;
@@ -489,7 +501,7 @@ body::after {
 .tile {
   perspective: 1100px;
   cursor: pointer;
-  min-height: 58px;
+  min-height: 58px; /* safety floor; grid 1fr handles actual height */
 }
 .tile-inner {
   position: relative;
@@ -508,12 +520,14 @@ body::after {
   overflow: hidden;
 }
 
+/* Front — unrevealed */
 .tile-front {
   background: linear-gradient(160deg, #102488 0%, #1a3aaa 55%, #0c1e70 100%);
   border: 2px solid #2e5ee0;
   justify-content: center;
   box-shadow: inset 0 0 24px rgba(0,0,50,.45);
 }
+/* Top sheen */
 .tile-front::before {
   content: ''; position: absolute;
   top: 0; left: 0; right: 0; height: 45%;
@@ -529,6 +543,7 @@ body::after {
   z-index: 1;
 }
 
+/* Back — revealed */
 .tile-back {
   background: linear-gradient(150deg, #b07808 0%, #e8b010 25%, #ffd700 50%, #e0a010 75%, #b07808 100%);
   border: 2px solid var(--gold-shine);
@@ -538,6 +553,7 @@ body::after {
   box-shadow: inset 0 0 40px rgba(180,120,0,.3),
               inset 0 2px 0 rgba(255,255,255,.4);
 }
+/* Top sheen on revealed */
 .tile-back::before {
   content: ''; position: absolute;
   top: 0; left: 0; right: 0; height: 48%;
@@ -565,6 +581,7 @@ body::after {
   text-shadow: 0 1px 3px rgba(255,255,255,.2);
 }
 
+/* Dimmed — remaining answers revealed at round end */
 .tile.dimmed .tile-back {
   background: linear-gradient(150deg, #3a3020 0%, #5a4820 40%, #3a3020 100%);
   border-color: #6a5830;
@@ -572,6 +589,7 @@ body::after {
 .tile.dimmed .tile-answer,
 .tile.dimmed .tile-points { color: rgba(255,255,255,.55); }
 
+/* #1 answer */
 .tile.number-one .tile-back {
   background: linear-gradient(150deg, #ffc800, #fff8a0 40%, #ffd700 60%, #ffc000);
   box-shadow: var(--glow-gold), 0 0 80px rgba(255,215,0,.6);
@@ -582,12 +600,14 @@ body::after {
   50%       { box-shadow: var(--glow-gold), 0 0 100px rgba(255,215,0,1); }
 }
 
+/* Hover hint for clickable tiles */
 [data-phase="playing"] .tile:not(.revealed):hover .tile-front,
 [data-phase="steal"]   .tile:not(.revealed):hover .tile-front {
   border-color: rgba(255,215,0,.8);
   box-shadow: 0 0 20px rgba(255,215,0,.5), inset 0 0 24px rgba(0,0,50,.45);
 }
 
+/* Points bubble */
 .points-bubble {
   position: absolute; top: -12px; right: 12px;
   font-family: 'Bebas Neue', sans-serif;
@@ -915,6 +935,364 @@ body::after {
 .end-team-name  { font-size: 19px; font-weight: 600; letter-spacing: .08em; }
 .end-team-score { font-family: 'Bebas Neue', sans-serif; font-size: 72px; color: var(--white); line-height: 1; }
 .score-divider  { font-family: 'Bebas Neue', sans-serif; font-size: 44px; color: var(--text-dim); }
+
+/* ═══════════════════════════════════════════════════════════
+   CODES SCREEN (multiplayer room setup)
+══════════════════════════════════════════════════════════════ */
+#codes-screen { z-index: 2; gap: 20px; padding: 20px; }
+
+.codes-card {
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  background: rgba(8,20,70,.75);
+  border: 2px solid var(--gold-dark);
+  border-radius: 20px;
+  padding: 32px 40px;
+  max-width: 620px; width: 100%;
+  box-shadow: 0 0 60px rgba(255,215,0,.12);
+}
+
+.codes-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(32px, 6vw, 56px);
+  letter-spacing: .2em;
+  color: var(--gold);
+  text-shadow: var(--glow-gold-sm);
+}
+
+.game-code-box {
+  text-align: center;
+  background: rgba(255,215,0,.06);
+  border: 1px solid rgba(255,215,0,.25);
+  border-radius: 14px;
+  padding: 14px 32px;
+  width: 100%;
+}
+.codes-label {
+  font-size: 11px; letter-spacing: .22em;
+  color: var(--text-dim); margin-bottom: 6px;
+}
+.game-code-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 10vw, 80px);
+  letter-spacing: .32em;
+  color: var(--gold);
+  text-shadow: var(--glow-gold);
+  line-height: 1;
+}
+
+.player-links {
+  display: flex; gap: 14px; width: 100%; flex-wrap: wrap;
+}
+
+.player-link-group {
+  flex: 1; min-width: 220px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.player-link-header {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+
+.player-link-team-badge {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px; letter-spacing: .14em;
+  padding: 2px 10px; border-radius: 6px;
+}
+.team1-badge { background: rgba(30,144,255,.25); color: var(--team1); }
+.team2-badge { background: rgba(255,69,0,.25);   color: var(--team2); }
+
+.player-link-status {
+  font-size: 11px; letter-spacing: .1em;
+  color: var(--text-dim);
+  transition: color .3s;
+}
+.player-link-status.mp-connected { color: #00dc50; }
+
+.player-link-label {
+  font-size: 11px; letter-spacing: .04em;
+  color: #7a90c0;
+  word-break: break-all;
+  line-height: 1.4;
+  background: rgba(0,0,0,.2);
+  padding: 6px 8px; border-radius: 6px;
+  min-height: 32px;
+}
+
+.btn-copy-link {
+  align-self: flex-start;
+  font-family: 'Oswald', sans-serif; font-size: 12px;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 6px; border: none;
+  background: rgba(255,215,0,.12); color: var(--gold);
+  cursor: pointer; transition: background .2s;
+}
+.btn-copy-link:hover { background: rgba(255,215,0,.22); }
+
+.codes-hint {
+  font-size: 12px; letter-spacing: .06em;
+  color: var(--text-dim); text-align: center;
+  line-height: 1.5;
+}
+
+.codes-actions {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;
+}
+
+.btn-skip-mp {
+  background: none; border: none;
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px; letter-spacing: .1em;
+  color: var(--text-dim); cursor: pointer;
+  text-decoration: underline;
+  transition: color .2s;
+}
+.btn-skip-mp:hover { color: var(--white); }
+
+/* Player online badge in team panels */
+.player-online-badge {
+  font-size: 16px;
+  opacity: .8;
+  animation: softBounce 2s ease-in-out infinite;
+  cursor: default;
+}
+@keyframes softBounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GAME-MODE PICKER (intro screen)
+══════════════════════════════════════════════════════════════ */
+.mode-picker {
+  width: min(720px, 100%);
+  background: rgba(8,20,70,.55);
+  border: 1px solid rgba(255,215,0,.18);
+  border-radius: 16px;
+  padding: 18px 20px 22px;
+  box-shadow: 0 0 30px rgba(255,215,0,.06);
+}
+.mode-picker-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 12px;
+}
+.mode-picker-label {
+  font-size: 12px; letter-spacing: .22em;
+  color: var(--gold); font-weight: 600;
+  text-shadow: 0 0 14px rgba(255,215,0,.4);
+}
+.mode-manage-link {
+  font-size: 11px; letter-spacing: .18em;
+  color: var(--text-dim); text-decoration: none;
+  padding: 4px 10px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.12);
+  transition: color .2s, border-color .2s, background .2s;
+}
+.mode-manage-link:hover {
+  color: #fff; border-color: rgba(255,215,0,.4);
+  background: rgba(255,215,0,.08);
+}
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.mode-loading {
+  font-size: 13px; color: var(--text-dim);
+  text-align: center; padding: 14px 0;
+  letter-spacing: .08em;
+}
+.mode-card {
+  cursor: pointer;
+  background: rgba(255,255,255,.04);
+  border: 2px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 14px 10px;
+  font-family: inherit;
+  color: #fff;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  transition: transform .15s, border-color .2s, background .2s, box-shadow .25s;
+}
+.mode-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,215,0,.35);
+  background: rgba(255,215,0,.05);
+}
+.mode-card.selected {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(255,215,0,.18), rgba(255,215,0,.05));
+  box-shadow: 0 0 24px rgba(255,215,0,.25);
+}
+.mode-card.mode-empty { opacity: .68; }
+.mode-card.mode-empty:hover { opacity: 1; }
+.mode-icon {
+  font-size: 32px;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px rgba(255,215,0,.25));
+}
+.mode-card-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px; letter-spacing: .1em;
+  color: #fff;
+  text-align: center;
+  line-height: 1;
+}
+.mode-card-meta {
+  font-size: 10px; letter-spacing: .1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.mode-empty-tag {
+  font-size: 9px; letter-spacing: .14em;
+  color: #ff9060;
+  text-align: center;
+  margin-top: 2px;
+  padding: 2px 6px;
+  background: rgba(255,80,40,.1);
+  border-radius: 4px;
+}
+
+/* Header admin link (host game screen) */
+.header-link {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 50%;
+  color: var(--gold);
+  text-decoration: none;
+  font-size: 16px;
+  transition: background .2s, transform .15s, border-color .2s;
+}
+.header-link:hover {
+  background: rgba(255,215,0,.16);
+  border-color: rgba(255,215,0,.4);
+  transform: rotate(45deg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HOST CHEAT SHEET
+══════════════════════════════════════════════════════════════ */
+#cheatsheet {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  max-height: 60vh;
+  background: linear-gradient(180deg, rgba(20,30,60,.96), rgba(8,14,35,.96));
+  border: 1px solid rgba(255,215,0,.4);
+  border-radius: 14px;
+  padding: 12px 14px;
+  z-index: 50;
+  box-shadow: 0 12px 40px rgba(0,0,0,.6), 0 0 24px rgba(255,215,0,.18);
+  display: flex; flex-direction: column;
+  font-family: 'Oswald', sans-serif;
+  transition: max-height .25s, padding .2s;
+}
+#cheatsheet.collapsed { max-height: 44px; overflow: hidden; padding-bottom: 0; }
+#cheatsheet.collapsed .cs-list,
+#cheatsheet.collapsed .cs-hint { display: none; }
+.cs-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
+}
+.cs-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  letter-spacing: .18em;
+  color: var(--gold);
+  text-shadow: 0 0 12px rgba(255,215,0,.4);
+}
+.cs-toggle {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  color: var(--gold);
+  width: 24px; height: 24px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+}
+.cs-toggle:hover { background: rgba(255,215,0,.16); }
+.cs-hint {
+  font-size: 10px; letter-spacing: .1em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.cs-list {
+  display: flex; flex-direction: column; gap: 4px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.cs-row {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-left: 3px solid rgba(255,215,0,.4);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: inherit;
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  transition: background .2s, border-color .2s, transform .12s, opacity .25s;
+}
+.cs-row:hover { background: rgba(255,215,0,.12); border-left-color: var(--gold); transform: translateX(2px); }
+.cs-row:active { transform: scale(.98); }
+.cs-row.revealed {
+  opacity: .42;
+  background: rgba(0,200,80,.1);
+  border-left-color: rgba(0,200,80,.7);
+  cursor: default;
+  pointer-events: none;
+}
+.cs-rank { font-weight: 700; color: var(--gold); font-size: 12px; }
+.cs-text { font-weight: 500; letter-spacing: .04em; line-height: 1.25; }
+.cs-pts {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  color: var(--gold);
+  background: rgba(255,215,0,.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: .04em;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CODES SCREEN — link cards polish
+══════════════════════════════════════════════════════════════ */
+.player-link-group {
+  position: relative;
+  overflow: hidden;
+  transition: border-color .25s, background .25s, transform .15s;
+}
+.player-link-group::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.04), transparent 60%);
+  pointer-events: none;
+}
+#team1-link-group { border-left: 3px solid var(--team1); }
+#team2-link-group { border-left: 3px solid var(--team2); }
+.player-link-group.is-connected {
+  background: linear-gradient(180deg, rgba(0,200,80,.08), rgba(255,255,255,.04));
+  border-color: rgba(0,200,80,.4);
+}
+.btn-copy-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; font-size: 12px; font-weight: 600;
+}
+.btn-copy-link:active { transform: scale(.96); }
 
 /* ── Utility ──────────────────────────────────────────────── */
 .hidden { display: none !important; }
