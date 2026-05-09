@@ -23,10 +23,11 @@
     html, body {
       height: 100%;
       overflow: hidden;
-      background: var(--dark-bg);
       font-family: 'Oswald', sans-serif;
       color: #fff;
       touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     body {
@@ -34,9 +35,45 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0;
       padding: 20px;
       min-height: 100dvh;
+      position: relative;
+      transition: background 0.6s;
+    }
+
+    /* Animated radial backdrop coloured by team */
+    body.team0 {
+      background:
+        radial-gradient(ellipse at top, rgba(42,125,225,0.25), transparent 65%),
+        radial-gradient(ellipse at bottom, rgba(20,60,140,0.18), transparent 65%),
+        var(--dark-bg);
+    }
+    body.team1 {
+      background:
+        radial-gradient(ellipse at top, rgba(212,64,0,0.25), transparent 65%),
+        radial-gradient(ellipse at bottom, rgba(140,30,0,0.18), transparent 65%),
+        var(--dark-bg);
+    }
+
+    /* Floating ambient glow */
+    body::before {
+      content: '';
+      position: fixed;
+      width: 80vmin; height: 80vmin;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: .35;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: floatGlow 12s ease-in-out infinite;
+      z-index: 0;
+    }
+    body.team0::before { background: radial-gradient(circle, var(--team1-color), transparent 70%); }
+    body.team1::before { background: radial-gradient(circle, var(--team2-color), transparent 70%); }
+    @keyframes floatGlow {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50%      { transform: translate(-50%, -55%) scale(1.08); }
     }
 
     /* Stars */
@@ -46,10 +83,37 @@
       background: #fff;
       opacity: 0;
       animation: twinkle 3s ease-in-out infinite;
+      z-index: 0;
     }
     @keyframes twinkle {
       0%, 100% { opacity: 0; }
       50% { opacity: 0.6; }
+    }
+
+    /* Top brand strip */
+    .brand-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      display: flex; justify-content: center; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      z-index: 5;
+      background: linear-gradient(180deg, rgba(0,0,0,0.45), transparent);
+      pointer-events: none;
+    }
+    .logo-mini {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 14px;
+      letter-spacing: 0.32em;
+      color: var(--gold);
+      text-shadow: 0 0 14px rgba(255,215,0,0.5);
+    }
+    .game-code-mini {
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      color: #6677aa;
+      padding: 2px 8px;
+      border-left: 1px solid rgba(255,255,255,0.12);
+      margin-left: 8px;
     }
 
     /* Main card */
@@ -59,63 +123,101 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
+      gap: 22px;
       z-index: 1;
+      position: relative;
     }
 
-    /* Game logo */
-    .logo-mini {
-      font-family: 'Bebas Neue', cursive;
-      font-size: clamp(22px, 5vw, 30px);
-      letter-spacing: 0.15em;
-      color: var(--gold);
-      text-shadow: 0 0 20px rgba(255,215,0,0.5);
+    /* Team name + badge */
+    .team-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 11px;
+      letter-spacing: 0.32em;
+      color: #aab;
+      text-transform: uppercase;
+      margin-bottom: -10px;
+    }
+    body.team0 .team-badge {
+      border-color: rgba(74,159,255,0.55);
+      background: rgba(42,125,225,0.12);
+      color: var(--team1-glow);
+    }
+    body.team1 .team-badge {
+      border-color: rgba(255,106,32,0.55);
+      background: rgba(212,64,0,0.12);
+      color: var(--team2-glow);
+    }
+    .team-badge-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 10px currentColor;
     }
 
     /* Team name */
     .team-name {
       font-family: 'Bebas Neue', cursive;
-      font-size: clamp(36px, 10vw, 64px);
+      font-size: clamp(40px, 11vw, 72px);
       letter-spacing: 0.08em;
       text-align: center;
       line-height: 1;
-      text-shadow: 0 0 30px currentColor;
+      text-shadow: 0 0 32px currentColor, 0 4px 18px rgba(0,0,0,0.5);
       transition: color 0.3s;
     }
-    body.team0 .team-name { color: var(--team1-color); }
-    body.team1 .team-name { color: var(--team2-color); }
+    body.team0 .team-name { color: var(--team1-glow); }
+    body.team1 .team-name { color: var(--team2-glow); }
 
     /* Status message */
     .status-msg {
-      font-size: clamp(14px, 3.5vw, 20px);
-      letter-spacing: 0.12em;
+      font-size: clamp(13px, 3.4vw, 18px);
+      letter-spacing: 0.18em;
       text-transform: uppercase;
       color: #8899cc;
       text-align: center;
       min-height: 1.4em;
-      transition: color 0.3s;
+      padding: 0 20px;
+      transition: color 0.3s, transform 0.3s;
+      font-weight: 500;
     }
-    .status-msg.ready { color: var(--gold); }
+    .status-msg.ready {
+      color: var(--gold);
+      text-shadow: 0 0 20px rgba(255,215,0,0.6);
+      animation: pulseText 1.2s ease-in-out infinite;
+    }
     .status-msg.playing { color: #4cff91; }
+    @keyframes pulseText {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.05); }
+    }
 
     /* Buzz button */
     .buzz-wrap {
       position: relative;
-      width: min(72vw, 300px);
-      height: min(72vw, 300px);
+      width: min(78vw, 320px);
+      height: min(78vw, 320px);
+      display: flex; align-items: center; justify-content: center;
     }
 
-    /* Pulse ring behind button */
+    /* Outer pulse rings (multiple) */
     .buzz-pulse {
       position: absolute;
-      inset: -12px;
+      inset: -6px;
       border-radius: 50%;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.3s;
+      border: 2px solid currentColor;
     }
-    body.team0 .buzz-pulse { background: radial-gradient(circle, rgba(42,125,225,0.35) 0%, transparent 70%); }
-    body.team1 .buzz-pulse { background: radial-gradient(circle, rgba(212,64,0,0.35) 0%, transparent 70%); }
+    .buzz-pulse:nth-child(2) { inset: -16px; }
+    .buzz-pulse:nth-child(3) { inset: -28px; }
+    body.team0 .buzz-pulse { color: var(--team1-glow); }
+    body.team1 .buzz-pulse { color: var(--team2-glow); }
 
     .buzz-btn {
       width: 100%;
@@ -124,72 +226,123 @@
       border: none;
       cursor: pointer;
       font-family: 'Bebas Neue', cursive;
-      font-size: clamp(40px, 12vw, 72px);
+      font-size: clamp(46px, 14vw, 80px);
       letter-spacing: 0.1em;
       color: #fff;
       transition: transform 0.12s, box-shadow 0.3s, filter 0.3s;
       position: relative;
       outline: none;
       -webkit-tap-highlight-color: transparent;
-      user-select: none;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
 
     body.team0 .buzz-btn {
-      background: radial-gradient(circle at 35% 35%, #5aaaff, var(--team1-color) 55%, #0a2a60);
-      box-shadow: 0 0 0 6px rgba(42,125,225,0.4), 0 8px 40px rgba(42,125,225,0.5), inset 0 -6px 20px rgba(0,0,50,0.4);
+      background:
+        radial-gradient(circle at 35% 30%, #7ac0ff 0%, var(--team1-color) 50%, #0a2a60 100%);
+      box-shadow:
+        0 0 0 4px rgba(74,159,255,0.5),
+        0 0 0 8px rgba(74,159,255,0.18),
+        0 12px 50px rgba(42,125,225,0.6),
+        inset 0 -8px 24px rgba(0,0,50,0.5),
+        inset 0 4px 14px rgba(255,255,255,0.18);
     }
     body.team1 .buzz-btn {
-      background: radial-gradient(circle at 35% 35%, #ff9860, var(--team2-color) 55%, #5a1200);
-      box-shadow: 0 0 0 6px rgba(212,64,0,0.4), 0 8px 40px rgba(212,64,0,0.5), inset 0 -6px 20px rgba(50,0,0,0.4);
+      background:
+        radial-gradient(circle at 35% 30%, #ffb080 0%, var(--team2-color) 50%, #5a1200 100%);
+      box-shadow:
+        0 0 0 4px rgba(255,106,32,0.5),
+        0 0 0 8px rgba(255,106,32,0.18),
+        0 12px 50px rgba(212,64,0,0.6),
+        inset 0 -8px 24px rgba(50,0,0,0.5),
+        inset 0 4px 14px rgba(255,255,255,0.18);
     }
 
     /* Disabled state */
     .buzz-btn:disabled {
-      filter: saturate(0.2) brightness(0.45);
+      filter: saturate(0.2) brightness(0.4);
       cursor: not-allowed;
       transform: none !important;
     }
-    .buzz-btn:disabled + .buzz-pulse,
-    .buzz-btn:disabled ~ .buzz-pulse { opacity: 0 !important; }
+    .buzz-btn:disabled ~ .buzz-pulse { opacity: 0 !important; animation: none !important; }
 
     /* Active (enabled) pulse animation */
     .buzz-btn:not(:disabled) ~ .buzz-pulse {
       opacity: 1;
-      animation: pulse-ring 1.6s ease-out infinite;
+      animation: pulse-ring 1.8s ease-out infinite;
     }
+    .buzz-btn:not(:disabled) ~ .buzz-pulse:nth-child(2) { animation-delay: 0.4s; }
+    .buzz-btn:not(:disabled) ~ .buzz-pulse:nth-child(3) { animation-delay: 0.8s; }
     @keyframes pulse-ring {
-      0%   { transform: scale(0.92); opacity: 0.6; }
-      60%  { transform: scale(1.08); opacity: 0.2; }
-      100% { transform: scale(1.12); opacity: 0; }
+      0%   { transform: scale(0.85); opacity: 0.7; }
+      80%  { opacity: 0; }
+      100% { transform: scale(1.18); opacity: 0; }
     }
 
     /* Press feedback */
-    .buzz-btn:not(:disabled):active {
-      transform: scale(0.93);
-    }
+    .buzz-btn:not(:disabled):active { transform: scale(0.92); }
 
     /* Pressed flash */
-    .buzz-btn.pressed {
-      animation: buzz-flash 0.35s ease-out;
-    }
+    .buzz-btn.pressed { animation: buzz-flash 0.5s ease-out; }
     @keyframes buzz-flash {
-      0%   { transform: scale(0.90); filter: brightness(1.8); }
+      0%   { transform: scale(0.85); filter: brightness(2); }
+      40%  { transform: scale(1.15); filter: brightness(1.4); }
       100% { transform: scale(1);    filter: brightness(1); }
+    }
+
+    /* Buzzed-in success state */
+    .buzzed-banner {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      pointer-events: none;
+      z-index: 4;
+      animation: buzzedIn 0.6s ease-out;
+    }
+    .buzzed-banner.show { display: flex; }
+    .buzzed-banner-text {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(60px, 16vw, 110px);
+      letter-spacing: 0.08em;
+      color: var(--gold);
+      text-shadow: 0 0 60px rgba(255,215,0,0.7), 0 6px 20px rgba(0,0,0,0.6);
+      animation: buzzedPop 0.6s cubic-bezier(0.18, 1.4, 0.5, 1);
+    }
+    @keyframes buzzedIn {
+      from { background: rgba(0,0,0,0); }
+      to   { background: rgba(0,0,0,0.4); }
+    }
+    @keyframes buzzedPop {
+      0%   { transform: scale(0.4); opacity: 0; }
+      100% { transform: scale(1);   opacity: 1; }
     }
 
     /* Connection status bar */
     .conn-bar {
       font-size: 11px;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
-      padding: 6px 16px;
+      padding: 7px 18px;
       border-radius: 20px;
       background: rgba(255,255,255,0.06);
       color: #4a5a88;
-      transition: background 0.3s, color 0.3s;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
+      font-weight: 600;
     }
-    .conn-bar.online  { background: rgba(0,220,80,0.12); color: #00dc50; }
-    .conn-bar.offline { background: rgba(220,60,0,0.12);  color: #ff5030; }
+    .conn-bar.online  {
+      background: rgba(0,220,80,0.12);
+      color: #00dc50;
+      border-color: rgba(0,220,80,0.3);
+    }
+    .conn-bar.offline {
+      background: rgba(220,60,0,0.12);
+      color: #ff5030;
+      border-color: rgba(220,60,0,0.3);
+    }
 
     /* Loading / error state */
     .loading-card {
@@ -207,17 +360,28 @@
 </head>
 <body>
 
-  <div class="player-card" id="main-card">
+  <div class="brand-bar">
     <div class="logo-mini">FAMILY FEUD</div>
+    <div class="game-code-mini" id="game-code-mini"></div>
+  </div>
+
+  <div class="player-card" id="main-card">
+    <div class="team-badge"><span class="team-badge-dot"></span><span id="team-badge-label">TEAM —</span></div>
     <div class="team-name" id="team-name">Loading…</div>
     <div class="status-msg" id="status-msg">Connecting…</div>
 
     <div class="buzz-wrap">
       <button class="buzz-btn" id="buzz-btn" disabled>BUZZ!</button>
       <div class="buzz-pulse"></div>
+      <div class="buzz-pulse"></div>
+      <div class="buzz-pulse"></div>
     </div>
 
     <div class="conn-bar" id="conn-bar">Connecting…</div>
+  </div>
+
+  <div class="buzzed-banner" id="buzzed-banner">
+    <div class="buzzed-banner-text">BUZZED IN!</div>
   </div>
 
   <script>
@@ -236,6 +400,10 @@
       // Apply team class to body for theming
       document.body.classList.add(`team${team}`);
 
+      // Show game code in the brand bar
+      document.getElementById('game-code-mini').textContent = `# ${gameCode}`;
+      document.getElementById('team-badge-label').textContent = `TEAM ${team + 1}`;
+
       // ── Stars ────────────────────────────────────────────────
       for (let i = 0; i < 80; i++) {
         const s = document.createElement('div');
@@ -250,6 +418,7 @@
       const statusEl   = document.getElementById('status-msg');
       const buzzBtn    = document.getElementById('buzz-btn');
       const connBar    = document.getElementById('conn-bar');
+      const buzzedBanner = document.getElementById('buzzed-banner');
 
       const phaseMessages = {
         intro:     'Waiting for game to start…',
@@ -338,7 +507,14 @@
         ws.send(JSON.stringify({ type: 'buzz', team }));
         buzzBtn.classList.add('pressed');
         buzzBtn.disabled = true; // prevent double-buzz
-        setTimeout(() => buzzBtn.classList.remove('pressed'), 350);
+
+        // Vibrate on supported devices
+        if (navigator.vibrate) navigator.vibrate([60, 40, 80]);
+
+        // Show buzzed banner briefly
+        buzzedBanner.classList.add('show');
+        setTimeout(() => buzzedBanner.classList.remove('show'), 1400);
+        setTimeout(() => buzzBtn.classList.remove('pressed'), 500);
       });
 
       // Keyboard space / enter to buzz (for accessibility)
