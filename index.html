@@ -21,7 +21,7 @@
     <div class="intro-logo">
       <div class="logo-family">FAMILY</div>
       <div class="logo-feud">FEUD</div>
-      <div class="logo-stars">★ &nbsp; ★ &nbsp; ★</div>
+      <div class="logo-stars"><i class="ico" data-icon="star"></i><i class="ico" data-icon="star"></i><i class="ico" data-icon="star"></i></div>
     </div>
 
     <div class="intro-form">
@@ -56,7 +56,7 @@
       <div class="mode-picker">
         <div class="mode-picker-header">
           <span class="mode-picker-label">CHOOSE A GAME MODE</span>
-          <a href="admin.html" class="mode-manage-link">⚙ Manage Modes</a>
+          <a href="admin.html" class="mode-manage-link"><i class="ico" data-icon="gear"></i> Manage Modes</a>
         </div>
         <div class="mode-grid" id="mode-grid">
           <div class="mode-loading">Loading game modes…</div>
@@ -78,11 +78,11 @@
     <div class="intro-logo" style="margin-bottom:16px;">
       <div class="logo-family">FAMILY</div>
       <div class="logo-feud">FEUD</div>
-      <div class="logo-stars">★ &nbsp; ★ &nbsp; ★</div>
+      <div class="logo-stars"><i class="ico" data-icon="star"></i><i class="ico" data-icon="star"></i><i class="ico" data-icon="star"></i></div>
     </div>
 
     <div class="codes-card">
-      <button class="btn-back" id="btn-back-intro" title="Back to team setup">← BACK</button>
+      <button class="btn-back" id="btn-back-intro" title="Back to team setup"><i class="ico" data-icon="arrowLeft"></i> BACK</button>
       <div class="codes-title">GAME CREATED!</div>
 
       <div class="game-code-box">
@@ -93,11 +93,11 @@
       <!-- Host control link — open on another device to run the board remotely -->
       <div class="host-link-group" id="host-link-group">
         <div class="player-link-header">
-          <span class="player-link-team-badge host-badge">🎛 HOST CONTROL</span>
+          <span class="player-link-team-badge host-badge"><i class="ico" data-icon="gamepad"></i> HOST CONTROL</span>
           <span class="player-link-status">Run the board from another device</span>
         </div>
         <div class="player-link-label" id="host-link-display">—</div>
-        <button class="btn-copy-link" data-copy="host">⎘ Copy Host Link</button>
+        <button class="btn-copy-link" data-copy="host"><i class="ico" data-icon="copy"></i> Copy Host Link</button>
         <p class="host-link-hint">Open this on a laptop, tablet or phone — it shows all the answers and every host button (reveal, strike, pass, steal). Keep it secret from players!</p>
       </div>
 
@@ -105,26 +105,26 @@
         <div class="player-link-group" id="team1-link-group">
           <div class="player-link-header">
             <span class="player-link-team-badge team1-badge">TEAM 1</span>
-            <span class="player-link-status" id="mp-p0-status">○ Waiting for player…</span>
+            <span class="player-link-status" id="mp-p0-status"><span class="status-dot"></span> Waiting for player…</span>
           </div>
           <div class="player-link-label" id="team1-link-display">—</div>
-          <button class="btn-copy-link" data-copy="team1">⎘ Copy Link</button>
+          <button class="btn-copy-link" data-copy="team1"><i class="ico" data-icon="copy"></i> Copy Link</button>
         </div>
 
         <div class="player-link-group" id="team2-link-group">
           <div class="player-link-header">
             <span class="player-link-team-badge team2-badge">TEAM 2</span>
-            <span class="player-link-status" id="mp-p1-status">○ Waiting for player…</span>
+            <span class="player-link-status" id="mp-p1-status"><span class="status-dot"></span> Waiting for player…</span>
           </div>
           <div class="player-link-label" id="team2-link-display">—</div>
-          <button class="btn-copy-link" data-copy="team2">⎘ Copy Link</button>
+          <button class="btn-copy-link" data-copy="team2"><i class="ico" data-icon="copy"></i> Copy Link</button>
         </div>
       </div>
 
       <p class="codes-hint">Players open their link on a phone and tap BUZZ! to ring in.</p>
 
       <div class="codes-actions">
-        <button class="btn-primary" id="btn-proceed-game">▶ START GAME</button>
+        <button class="btn-primary" id="btn-proceed-game"><i class="ico" data-icon="play"></i> START GAME</button>
         <button class="btn-skip-mp" id="btn-skip-mp">Play without phones</button>
       </div>
     </div>
@@ -137,8 +137,8 @@
 
     <!-- ── Header ── -->
     <header id="game-header">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <button id="btn-exit-game" class="header-link" title="Leave game and return home" style="transform:none;">←</button>
+      <div class="header-side">
+        <button id="btn-exit-game" class="header-btn" title="Leave game and return home"><i class="ico" data-icon="arrowLeft"></i></button>
         <div class="round-badge">
           <span class="round-label">ROUND</span>
           <span class="round-number" id="round-number">1</span>
@@ -147,14 +147,14 @@
 
       <div class="logo-mini">FAMILY FEUD</div>
 
-      <div style="display:flex;align-items:center;gap:12px;">
+      <div class="header-side" style="justify-content:flex-end;">
         <div class="running-points-wrap">
           <span class="pts-label">POINTS</span>
           <span class="pts-value" id="running-points">0</span>
           <span class="hidden" id="multiplier-badge">×1</span>
         </div>
-        <a href="admin.html" class="header-link" title="Manage game modes" target="_blank" rel="noopener">⚙</a>
-        <button id="btn-mute" title="Toggle Sound (M)">🔊</button>
+        <a href="admin.html" class="header-btn" title="Manage game modes" target="_blank" rel="noopener"><i class="ico" data-icon="gear"></i></a>
+        <button id="btn-mute" class="header-btn" title="Toggle Sound (M)"><i class="ico" data-icon="volumeOn"></i></button>
       </div>
     </header>
 
@@ -172,8 +172,8 @@
           <span class="buzz-text">BUZZ!</span>
           <span class="buzz-key">[ Q ]</span>
         </button>
-        <span class="active-badge hidden" id="team1-active-badge">▶ PLAYING</span>
-        <span class="player-online-badge hidden" id="team1-online-badge" title="Player connected on phone">📱</span>
+        <span class="active-badge hidden" id="team1-active-badge"><i class="ico" data-icon="play"></i> PLAYING</span>
+        <span class="player-online-badge hidden" id="team1-online-badge" title="Player connected on phone"><i class="ico" data-icon="phone"></i></span>
       </div>
 
       <!-- Center Board -->
@@ -207,8 +207,8 @@
           <span class="buzz-text">BUZZ!</span>
           <span class="buzz-key">[ P ]</span>
         </button>
-        <span class="active-badge hidden" id="team2-active-badge">▶ PLAYING</span>
-        <span class="player-online-badge hidden" id="team2-online-badge" title="Player connected on phone">📱</span>
+        <span class="active-badge hidden" id="team2-active-badge"><i class="ico" data-icon="play"></i> PLAYING</span>
+        <span class="player-online-badge hidden" id="team2-online-badge" title="Player connected on phone"><i class="ico" data-icon="phone"></i></span>
       </div>
 
     </main>
@@ -222,14 +222,14 @@
     <div id="control-panel">
       <div id="control-label">HOST CONTROLS</div>
       <div id="control-buttons">
-        <button class="ctrl-btn btn-green"  id="btn-start-round" title="Begin the current round">▶ START ROUND</button>
-        <button class="ctrl-btn btn-red"    id="btn-strike"       title="Wrong answer — add a strike (S)" disabled>✕ STRIKE</button>
-        <button class="ctrl-btn btn-blue"   id="btn-pass"         title="Pass control to other team" disabled>⇄ PASS</button>
-        <button class="ctrl-btn btn-yellow" id="btn-steal-correct" title="Steal answer was CORRECT" disabled>★ STEAL ✓</button>
-        <button class="ctrl-btn btn-red"    id="btn-steal-wrong"  title="Steal answer was WRONG" disabled>★ STEAL ✕</button>
-        <button class="ctrl-btn btn-purple" id="btn-reveal-all"   title="Reveal all remaining answers (A)" disabled>⊞ REVEAL ALL</button>
-        <button class="ctrl-btn btn-orange" id="btn-next-round"   title="Advance to next round" disabled>→ NEXT ROUND</button>
-        <button class="ctrl-btn btn-red"    id="btn-end-game"     title="End the game now — highest score wins" disabled>⏹ END GAME</button>
+        <button class="ctrl-btn btn-green"  id="btn-start-round" title="Begin the current round"><i class="ico" data-icon="play"></i><span>START ROUND</span></button>
+        <button class="ctrl-btn btn-red"    id="btn-strike"       title="Wrong answer — add a strike (S / X)" disabled><i class="ico" data-icon="strike"></i><span>STRIKE</span></button>
+        <button class="ctrl-btn btn-blue"   id="btn-pass"         title="Pass control to other team" disabled><i class="ico" data-icon="swap"></i><span>PASS</span></button>
+        <button class="ctrl-btn btn-yellow" id="btn-steal-correct" title="Steal answer was CORRECT" disabled><i class="ico" data-icon="check"></i><span>STEAL OK</span></button>
+        <button class="ctrl-btn btn-red"    id="btn-steal-wrong"  title="Steal answer was WRONG" disabled><i class="ico" data-icon="strike"></i><span>STEAL NO</span></button>
+        <button class="ctrl-btn btn-purple" id="btn-reveal-all"   title="Reveal all remaining answers (A)" disabled><i class="ico" data-icon="grid"></i><span>REVEAL ALL</span></button>
+        <button class="ctrl-btn btn-orange" id="btn-next-round"   title="Advance to next round" disabled><i class="ico" data-icon="arrowRight"></i><span>NEXT ROUND</span></button>
+        <button class="ctrl-btn btn-red"    id="btn-end-game"     title="End the game now — highest score wins" disabled><i class="ico" data-icon="stop"></i><span>END GAME</span></button>
       </div>
     </div>
 
@@ -284,8 +284,8 @@
 
         <!-- Player Controls -->
         <div class="fm-controls-box">
-          <button class="ctrl-btn btn-green" id="fm-btn-start-p1">▶ PLAYER 1 START</button>
-          <button class="ctrl-btn btn-blue"  id="fm-btn-start-p2" disabled>▶ PLAYER 2 START</button>
+          <button class="ctrl-btn btn-green" id="fm-btn-start-p1"><i class="ico" data-icon="play"></i><span>PLAYER 1 START</span></button>
+          <button class="ctrl-btn btn-blue"  id="fm-btn-start-p2" disabled><i class="ico" data-icon="play"></i><span>PLAYER 2 START</span></button>
 
           <!-- Answer entry (shown during play) -->
           <div class="fm-answer-form hidden" id="fm-answer-form">
@@ -298,8 +298,8 @@
               <input type="number" id="fm-pts-input" placeholder="0" min="0" max="100">
             </div>
             <div class="fm-grade-row">
-              <button class="ctrl-btn btn-green" id="fm-btn-correct" style="flex:1;">✓ CORRECT</button>
-              <button class="ctrl-btn btn-red"   id="fm-btn-wrong"   style="flex:1;">✕ WRONG</button>
+              <button class="ctrl-btn btn-green" id="fm-btn-correct" style="flex:1;"><i class="ico" data-icon="check"></i><span>CORRECT</span></button>
+              <button class="ctrl-btn btn-red"   id="fm-btn-wrong"   style="flex:1;"><i class="ico" data-icon="strike"></i><span>WRONG</span></button>
             </div>
             <button class="ctrl-btn btn-blue" id="fm-btn-skip" style="width:100%;">PASS / SKIP</button>
           </div>
@@ -352,6 +352,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="js/icons.js"></script>
   <script src="js/data.js"></script>
   <script src="js/sounds.js"></script>
   <script src="js/multiplayer.js"></script>

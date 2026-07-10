@@ -118,7 +118,7 @@
       gap: 10px; align-items: center;
       background: rgba(255,255,255,.05);
       border: 1px solid rgba(255,255,255,.1);
-      border-left: 4px solid rgba(255,215,0,.5);
+      border: 2px solid rgba(255,215,0,.5);
       border-radius: 10px;
       padding: 12px 14px;
       color: #fff;
@@ -127,15 +127,15 @@
       transition: background .15s, transform .1s, opacity .25s, border-color .2s;
       -webkit-tap-highlight-color: transparent;
     }
-    .hc-ans:not(:disabled):hover  { background: rgba(255,215,0,.14); border-left-color: var(--gold); }
+    .hc-ans:not(:disabled):hover  { background: rgba(255,215,0,.14); border-color: var(--gold); }
     .hc-ans:not(:disabled):active { transform: scale(.97); }
     .hc-ans:disabled { cursor: default; }
     .hc-ans.revealed {
-      opacity: .45;
+      opacity: .5;
       background: rgba(0,200,80,.1);
-      border-left-color: var(--green);
+      border-color: var(--green);
     }
-    .hc-ans.revealed .hc-ans-num::before { content: '✓ '; color: #4cff91; }
+    .hc-ans.revealed .hc-ans-num { color: #4cff91; }
     .hc-ans-num  { font-weight: 700; color: var(--gold); }
     .hc-ans-text { font-weight: 500; line-height: 1.25; }
     .hc-ans-pts  {
@@ -168,12 +168,12 @@
     .hc-strike {
       width: 34px; height: 34px;
       display: flex; align-items: center; justify-content: center;
-      font-family: 'Bebas Neue', cursive; font-size: 24px;
       color: rgba(255,255,255,.12);
       border: 2px solid rgba(255,255,255,.1);
       border-radius: 8px;
       transition: color .2s, border-color .2s, background .2s;
     }
+    .hc-strike .ico-svg { width: 20px; height: 20px; }
     .hc-strike.on {
       color: var(--red);
       border-color: rgba(255,59,48,.6);
@@ -189,8 +189,8 @@
       padding: 10px 14px;
       transition: border-color .25s, box-shadow .25s;
     }
-    .hc-team.t1 { border-left: 4px solid var(--team1); }
-    .hc-team.t2 { border-left: 4px solid var(--team2); }
+    .hc-team.t1 { border: 2px solid var(--team1); }
+    .hc-team.t2 { border: 2px solid var(--team2); }
     .hc-team.active {
       border-color: var(--gold);
       box-shadow: 0 0 16px rgba(255,215,0,.25);
@@ -200,7 +200,10 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .hc-team.active .hc-team-name::after {
-      content: ' ▶'; color: var(--gold); font-size: 11px;
+      content: ''; display: inline-block; margin-left: 6px;
+      border-left: 8px solid var(--gold);
+      border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+      vertical-align: middle;
     }
     .hc-team-score {
       font-family: 'Bebas Neue', cursive;
@@ -259,6 +262,13 @@
     .hc-error strong { color: #ff5030; }
 
     .hidden { display: none !important; }
+
+    /* Inline SVG icons */
+    .ico { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
+    .ico-svg { width: 1em; height: 1em; display: block; }
+    .hc-btn .ico-svg { width: 1.25em; height: 1.25em; }
+    .hc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .hc-conn .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 4px; vertical-align: middle; }
   </style>
 </head>
 <body>
@@ -289,9 +299,9 @@
 
     <div class="hc-info-row">
       <div class="hc-strikes" id="hc-strikes">
-        <div class="hc-strike">✕</div>
-        <div class="hc-strike">✕</div>
-        <div class="hc-strike">✕</div>
+        <div class="hc-strike"><i class="ico" data-icon="strike"></i></div>
+        <div class="hc-strike"><i class="ico" data-icon="strike"></i></div>
+        <div class="hc-strike"><i class="ico" data-icon="strike"></i></div>
       </div>
       <div class="hc-team t1" id="hc-team1">
         <span class="hc-team-name" id="hc-t1-name">Team 1</span>
@@ -304,32 +314,34 @@
     </div>
 
     <div class="hc-actions" id="hc-actions">
-      <button class="hc-btn hc-begin hc-btn-wide hidden" id="b-proceed">▶ BEGIN GAME</button>
-      <button class="hc-btn hc-green"  id="b-start"  disabled>▶ START ROUND</button>
-      <button class="hc-btn hc-blue"   id="b-buzz1"  disabled>🔵 TEAM 1 BUZZ</button>
-      <button class="hc-btn hc-orange" id="b-buzz2"  disabled>🟠 TEAM 2 BUZZ</button>
-      <button class="hc-btn hc-red"    id="b-strike" disabled>✕ STRIKE</button>
-      <button class="hc-btn hc-blue"   id="b-pass"   disabled>⇄ PASS</button>
-      <button class="hc-btn hc-yellow" id="b-steal-ok" disabled>★ STEAL ✓</button>
-      <button class="hc-btn hc-red"    id="b-steal-no" disabled>★ STEAL ✕</button>
-      <button class="hc-btn hc-purple" id="b-reveal-all" disabled>⊞ REVEAL ALL</button>
-      <button class="hc-btn hc-orange" id="b-next"   disabled>→ NEXT ROUND</button>
-      <button class="hc-btn hc-gray hc-btn-wide" id="b-end" disabled>⏹ END GAME</button>
+      <button class="hc-btn hc-begin hc-btn-wide hidden" id="b-proceed"><i class="ico" data-icon="play"></i><span>BEGIN GAME</span></button>
+      <button class="hc-btn hc-green"  id="b-start"  disabled><i class="ico" data-icon="play"></i><span>START ROUND</span></button>
+      <button class="hc-btn hc-blue"   id="b-buzz1"  disabled><span>TEAM 1 BUZZ</span></button>
+      <button class="hc-btn hc-orange" id="b-buzz2"  disabled><span>TEAM 2 BUZZ</span></button>
+      <button class="hc-btn hc-red"    id="b-strike" disabled><i class="ico" data-icon="strike"></i><span>STRIKE</span></button>
+      <button class="hc-btn hc-blue"   id="b-pass"   disabled><i class="ico" data-icon="swap"></i><span>PASS</span></button>
+      <button class="hc-btn hc-yellow" id="b-steal-ok" disabled><i class="ico" data-icon="check"></i><span>STEAL OK</span></button>
+      <button class="hc-btn hc-red"    id="b-steal-no" disabled><i class="ico" data-icon="strike"></i><span>STEAL NO</span></button>
+      <button class="hc-btn hc-purple" id="b-reveal-all" disabled><i class="ico" data-icon="grid"></i><span>REVEAL ALL</span></button>
+      <button class="hc-btn hc-orange" id="b-next"   disabled><i class="ico" data-icon="arrowRight"></i><span>NEXT ROUND</span></button>
+      <button class="hc-btn hc-gray hc-btn-wide" id="b-end" disabled><i class="ico" data-icon="stop"></i><span>END GAME</span></button>
     </div>
 
     <p class="hc-note">
-      Tap an answer above to reveal it on the board · During a steal, tap the answer first, then STEAL ✓<br>
+      Tap an answer above to reveal it on the board · During a steal, tap the answer they said, then STEAL OK<br>
       Keyboard: 1–8 reveal · S / X strike · A reveal all
     </p>
   </div>
 
   <div id="hc-error" class="hc-error hidden"></div>
 
+  <script src="js/icons.js"></script>
   <script>
     (function () {
       'use strict';
 
       const $ = (id) => document.getElementById(id);
+      if (window.Icons) Icons.hydrate(document);
 
       const params   = new URLSearchParams(location.search);
       const gameCode = (params.get('game') || '').toUpperCase();
@@ -374,7 +386,7 @@
           }
 
           if (msg.type === 'joined') {
-            $('hc-conn').textContent = '● Connected';
+            $('hc-conn').innerHTML = '<span class="dot"></span>Connected';
             $('hc-conn').className = 'hc-conn online';
           }
 
@@ -413,7 +425,7 @@
         setup:     'Ready — press START ROUND',
         faceoff:   'FACE-OFF! Tap the team that buzzed / answered first',
         playing:   'In play — tap an answer to reveal, or STRIKE',
-        steal:     'STEAL! Tap the answer they said, then STEAL ✓ — or STEAL ✕',
+        steal:     'STEAL! Tap the answer they said, then STEAL OK — or STEAL NO',
         revealAll: 'Revealing remaining answers…',
         roundEnd:  'Round over — press NEXT ROUND',
         fastMoney: 'Fast Money — control it from the main board screen',

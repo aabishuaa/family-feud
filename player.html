@@ -338,6 +338,7 @@
       color: #00dc50;
       border-color: rgba(0,220,80,0.3);
     }
+    .cb-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor; margin-right:6px; box-shadow:0 0 8px currentColor; vertical-align:middle; }
     .conn-bar.offline {
       background: rgba(220,60,0,0.12);
       color: #ff5030;
@@ -476,7 +477,7 @@
             const tName = msg.teamName || `Team ${team + 1}`;
             teamNameEl.textContent = tName;
             document.title = `${tName} — Buzz!`;
-            connBar.textContent = '● Connected';
+            connBar.innerHTML = '<span class="cb-dot"></span>Connected';
             connBar.className = 'conn-bar online';
             applyState(msg.phase, msg.buzzerActive);
           }

@@ -158,7 +158,17 @@
   color: #6677aa;
   text-align: center;
 }
-.editor-empty-icon  { font-size: 64px; opacity: 0.4; }
+.editor-empty-icon  { font-size: 64px; opacity: 0.35; color: #6677aa; }
+.editor-empty-icon .ico-svg { width: 64px; height: 64px; }
+
+/* Inline SVG icon base (admin) */
+.ico { display: inline-flex; align-items: center; justify-content: center; line-height: 0; vertical-align: -0.05em; }
+.ico-svg { width: 1em; height: 1em; display: block; }
+.btn-admin, .admin-link, .btn-add-answer, .btn-add-round {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+}
+.icon-btn .ico-svg { width: 16px; height: 16px; }
+.pack-list-empty .ico-svg { width: 15px; height: 15px; vertical-align: -0.2em; }
 .editor-empty-title { font-size: 22px; letter-spacing: 0.1em; color: #8899cc; }
 .editor-empty-hint  { font-size: 14px; max-width: 360px; line-height: 1.5; }
 
@@ -300,11 +310,55 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Rounds toolbar / search ──────────────────────── */
+.rounds-toolbar {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 14px;
+}
+.search-box {
+  flex: 1;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 0 12px;
+  transition: border-color .2s, background .2s;
+}
+.search-box:focus-within { border-color: #4a9fff; background: rgba(0,0,0,0.4); }
+.search-box .search-ico { color: #6677aa; font-size: 18px; flex-shrink: 0; }
+.search-box input {
+  flex: 1;
+  background: transparent; border: none; outline: none;
+  color: #fff; font-family: inherit; font-size: 14px;
+  padding: 11px 0;
+}
+.search-box input::placeholder { color: #5a6a92; }
+.search-clear {
+  background: transparent; border: none; cursor: pointer;
+  color: #8899cc; font-size: 13px; padding: 4px;
+  display: inline-flex; align-items: center;
+}
+.search-clear:hover { color: #fff; }
+.rounds-count {
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: #6677aa; white-space: nowrap;
+}
+
 /* ── Rounds ───────────────────────────────────────── */
 .rounds-container {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  max-height: calc(100vh - 360px);
+  min-height: 200px;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+.rounds-container::-webkit-scrollbar { width: 8px; }
+.rounds-container::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.16); border-radius: 4px;
 }
 .round-card {
   background: rgba(255,255,255,0.04);
@@ -442,8 +496,8 @@
   margin-bottom: 14px;
   padding: 10px 14px;
   background: rgba(74,159,255,0.06);
-  border-left: 3px solid rgba(74,159,255,0.4);
-  border-radius: 4px;
+  border: 1px solid rgba(74,159,255,0.4);
+  border-radius: 8px;
 }
 .fm-container {
   display: flex;
