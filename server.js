@@ -42,8 +42,24 @@ function savePacks(packs) {
 let PACKS = loadPacks();
 if (!PACKS) {
   PACKS = JSON.parse(JSON.stringify(GAME_PACK_SEEDS));
-  savePacks(PACKS);
+} else {
+  // Refresh built-in packs from seeds (they're read-only, so seeds are the source of truth)
+  for (const seed of GAME_PACK_SEEDS.filter((s) => s.builtIn)) {
+    const idx = PACKS.findIndex((p) => p.id === seed.id);
+    if (idx >= 0) PACKS[idx] = JSON.parse(JSON.stringify(seed));
+    else PACKS.unshift(JSON.parse(JSON.stringify(seed)));
+  }
+  // Migrate custom packs still carrying the old 3-round defaults to the new 4-round structure
+  for (const p of PACKS) {
+    if (p.builtIn) continue;
+    const s = p.settings || {};
+    if (s.totalRounds === 3 && (s.roundMultipliers || []).join(',') === '1,2,3') {
+      s.totalRounds = DEFAULT_SETTINGS.totalRounds;
+      s.roundMultipliers = [...DEFAULT_SETTINGS.roundMultipliers];
+    }
+  }
 }
+savePacks(PACKS);
 
 function findPack(id) {
   return PACKS.find((p) => p.id === id);
@@ -187,6 +203,8 @@ app.post('/api/create-game', (req, res) => {
     gameCode, hostToken, packId,
     hostWs: null,
     players: [null, null],
+    controls: [],                // remote host-control connections
+    lastEvent: null,             // last game-event, replayed to controls on join
     teamNames: ['Team 1', 'Team 2'],
     buzzerActive: false,
     phase: 'intro',
@@ -243,6 +261,20 @@ wss.on('connection', (ws) => {
         safeSend(room.hostWs, { type: 'player-joined', team: clientTeam });
         return;
       }
+
+      // Remote host-control panel — authenticated with the host token
+      if (clientRole === 'control') {
+        if (msg.token !== room.hostToken) {
+          safeSend(ws, { type: 'error', message: 'Invalid host token.' });
+          return;
+        }
+        room.controls.push(ws);
+        safeSend(ws, { type: 'joined', role: 'control', gameCode: room.gameCode });
+        // Replay the last known state, then ask the board for a fresh sync
+        if (room.lastEvent) safeSend(ws, room.lastEvent);
+        safeSend(room.hostWs, { type: 'control-joined' });
+        return;
+      }
     }
 
     if (!room) return;
@@ -252,11 +284,22 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // Control panel button presses relayed to the board
+    if (msg.type === 'control-action' && clientRole === 'control') {
+      safeSend(room.hostWs, msg);
+      return;
+    }
+
     if (msg.type === 'game-event' && clientRole === 'host') {
       if (typeof msg.buzzerActive === 'boolean') room.buzzerActive = msg.buzzerActive;
       if (msg.phase) room.phase = msg.phase;
       if (Array.isArray(msg.teamNames)) room.teamNames = msg.teamNames;
-      room.players.forEach((p) => safeSend(p, msg));
+      room.lastEvent = msg;
+      // Players get the event WITHOUT the sync payload (it contains the answers!)
+      const { sync, ...playerMsg } = msg;
+      room.players.forEach((p) => safeSend(p, playerMsg));
+      // Controls get the full state including answers
+      room.controls.forEach((c) => safeSend(c, msg));
     }
   });
 
@@ -267,6 +310,8 @@ wss.on('connection', (ws) => {
     } else if (clientRole === 'player' && clientTeam >= 0) {
       room.players[clientTeam] = null;
       safeSend(room.hostWs, { type: 'player-left', team: clientTeam });
+    } else if (clientRole === 'control') {
+      room.controls = room.controls.filter((c) => c !== ws);
     }
   });
 

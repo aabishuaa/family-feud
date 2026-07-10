@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Feud — Host Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:      #ffd700;
+      --gold-dark: #b8860b;
+      --team1:     #2a7de1;
+      --team2:     #d44000;
+      --dark-bg:   #070d1f;
+      --card-bg:   rgba(13,23,48,.75);
+      --text-dim:  #8899cc;
+      --green:     #00c853;
+      --red:       #ff3b30;
+    }
+
+    html, body {
+      min-height: 100%;
+      background:
+        radial-gradient(ellipse at top, rgba(30,60,160,.18), transparent 60%),
+        var(--dark-bg);
+      font-family: 'Oswald', sans-serif;
+      color: #fff;
+    }
+
+    body { padding: 14px 14px 90px; max-width: 860px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .hc-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; flex-wrap: wrap;
+      padding: 10px 0 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      margin-bottom: 14px;
+    }
+    .hc-brand {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 20px; letter-spacing: .18em; color: var(--gold);
+      text-shadow: 0 0 16px rgba(255,215,0,.5);
+    }
+    .hc-brand small {
+      display: block;
+      font-family: 'Oswald', sans-serif;
+      font-size: 10px; letter-spacing: .3em; color: var(--text-dim);
+    }
+    .hc-meta { display: flex; align-items: center; gap: 10px; }
+    .hc-code {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 18px; letter-spacing: .24em;
+      color: var(--gold);
+      background: rgba(255,215,0,.1);
+      border: 1px solid rgba(255,215,0,.3);
+      padding: 4px 12px; border-radius: 8px;
+    }
+    .hc-conn {
+      font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+      padding: 5px 12px; border-radius: 20px; font-weight: 600;
+      background: rgba(255,255,255,.06); color: #4a5a88;
+    }
+    .hc-conn.online  { background: rgba(0,220,80,.12); color: #00dc50; }
+    .hc-conn.offline { background: rgba(220,60,0,.12);  color: #ff5030; }
+
+    /* ── Phase / status strip ── */
+    .hc-status {
+      text-align: center;
+      font-size: 13px; letter-spacing: .16em; text-transform: uppercase;
+      color: var(--gold); font-weight: 600;
+      padding: 10px 14px;
+      background: rgba(255,215,0,.06);
+      border: 1px solid rgba(255,215,0,.2);
+      border-radius: 10px;
+      margin-bottom: 14px;
+      min-height: 40px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── Question card ── */
+    .hc-question-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .hc-q-meta {
+      display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;
+    }
+    .hc-round-chip, .hc-mult-chip, .hc-pts-chip {
+      font-size: 11px; letter-spacing: .16em; font-weight: 600;
+      padding: 3px 10px; border-radius: 6px;
+    }
+    .hc-round-chip { background: rgba(255,255,255,.08); color: var(--text-dim); }
+    .hc-mult-chip  { background: rgba(255,215,0,.14); color: var(--gold); }
+    .hc-pts-chip   { background: rgba(0,200,80,.12); color: #4cff91; margin-left: auto; }
+    .hc-question {
+      font-size: clamp(15px, 4vw, 19px);
+      font-weight: 600; line-height: 1.35;
+    }
+
+    /* ── Answers grid ── */
+    .hc-answers {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .hc-ans {
+      display: grid;
+      grid-template-columns: 26px 1fr auto;
+      gap: 10px; align-items: center;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-left: 4px solid rgba(255,215,0,.5);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #fff;
+      font-family: inherit; font-size: 14px;
+      cursor: pointer; text-align: left;
+      transition: background .15s, transform .1s, opacity .25s, border-color .2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hc-ans:not(:disabled):hover  { background: rgba(255,215,0,.14); border-left-color: var(--gold); }
+    .hc-ans:not(:disabled):active { transform: scale(.97); }
+    .hc-ans:disabled { cursor: default; }
+    .hc-ans.revealed {
+      opacity: .45;
+      background: rgba(0,200,80,.1);
+      border-left-color: var(--green);
+    }
+    .hc-ans.revealed .hc-ans-num::before { content: '✓ '; color: #4cff91; }
+    .hc-ans-num  { font-weight: 700; color: var(--gold); }
+    .hc-ans-text { font-weight: 500; line-height: 1.25; }
+    .hc-ans-pts  {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 18px; color: var(--gold);
+      background: rgba(255,215,0,.12);
+      padding: 2px 10px; border-radius: 6px;
+    }
+    .hc-answers-empty {
+      grid-column: 1 / -1;
+      text-align: center; color: var(--text-dim);
+      font-size: 13px; letter-spacing: .1em;
+      padding: 30px 10px;
+      background: rgba(255,255,255,.03);
+      border: 1px dashed rgba(255,255,255,.12);
+      border-radius: 10px;
+    }
+
+    /* ── Strikes + scores row ── */
+    .hc-info-row {
+      display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .hc-strikes {
+      display: flex; gap: 8px; align-items: center;
+      background: var(--card-bg);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 10px 16px;
+    }
+    .hc-strike {
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Bebas Neue', cursive; font-size: 24px;
+      color: rgba(255,255,255,.12);
+      border: 2px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      transition: color .2s, border-color .2s, background .2s;
+    }
+    .hc-strike.on {
+      color: var(--red);
+      border-color: rgba(255,59,48,.6);
+      background: rgba(255,59,48,.12);
+      text-shadow: 0 0 12px rgba(255,59,48,.8);
+    }
+    .hc-team {
+      flex: 1; min-width: 130px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      background: var(--card-bg);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 10px 14px;
+      transition: border-color .25s, box-shadow .25s;
+    }
+    .hc-team.t1 { border-left: 4px solid var(--team1); }
+    .hc-team.t2 { border-left: 4px solid var(--team2); }
+    .hc-team.active {
+      border-color: var(--gold);
+      box-shadow: 0 0 16px rgba(255,215,0,.25);
+    }
+    .hc-team-name {
+      font-size: 13px; font-weight: 600; letter-spacing: .06em;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .hc-team.active .hc-team-name::after {
+      content: ' ▶'; color: var(--gold); font-size: 11px;
+    }
+    .hc-team-score {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 26px; color: var(--gold); line-height: 1;
+    }
+
+    /* ── Action buttons ── */
+    .hc-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+    }
+    .hc-btn {
+      font-family: 'Oswald', sans-serif;
+      font-size: 13px; font-weight: 700; letter-spacing: .12em;
+      padding: 15px 10px;
+      border: none; border-radius: 10px;
+      color: #fff; cursor: pointer;
+      transition: filter .15s, transform .1s, opacity .2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hc-btn:not(:disabled):hover  { filter: brightness(1.15); }
+    .hc-btn:not(:disabled):active { transform: scale(.96); }
+    .hc-btn:disabled { opacity: .25; cursor: not-allowed; }
+    .hc-green  { background: linear-gradient(135deg, #00a844, #007a30); }
+    .hc-red    { background: linear-gradient(135deg, #d92b1f, #a01508); }
+    .hc-blue   { background: linear-gradient(135deg, #2a7de1, #16509a); }
+    .hc-yellow { background: linear-gradient(135deg, #e0a800, #a87700); color: #1a1200; }
+    .hc-purple { background: linear-gradient(135deg, #7b3fd4, #4f2490); }
+    .hc-orange { background: linear-gradient(135deg, #e06a00, #a04a00); }
+    .hc-gray   { background: rgba(255,255,255,.1); }
+    .hc-btn-wide { grid-column: 1 / -1; }
+
+    /* Big begin-game button (lobby) */
+    .hc-begin {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 26px; letter-spacing: .2em;
+      padding: 20px;
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold) 50%, var(--gold-dark));
+      color: #120600;
+      box-shadow: 0 0 30px rgba(255,215,0,.3);
+    }
+
+    .hc-note {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 11px; letter-spacing: .08em; line-height: 1.6;
+      color: var(--text-dim);
+    }
+
+    /* Error card */
+    .hc-error {
+      text-align: center; padding: 60px 20px; color: var(--text-dim);
+      font-size: 15px; letter-spacing: .08em; line-height: 1.6;
+    }
+    .hc-error strong { color: #ff5030; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <header class="hc-header">
+    <div class="hc-brand">FAMILY FEUD<small>HOST CONTROL</small></div>
+    <div class="hc-meta">
+      <span class="hc-code" id="hc-code">——————</span>
+      <span class="hc-conn" id="hc-conn">Connecting…</span>
+    </div>
+  </header>
+
+  <div id="hc-main">
+    <div class="hc-status" id="hc-status">Connecting to the game board…</div>
+
+    <div class="hc-question-card">
+      <div class="hc-q-meta">
+        <span class="hc-round-chip" id="hc-round">ROUND —</span>
+        <span class="hc-mult-chip"  id="hc-mult">×1</span>
+        <span class="hc-pts-chip"   id="hc-pts">POT: 0</span>
+      </div>
+      <div class="hc-question" id="hc-question">Waiting for the round to start…</div>
+    </div>
+
+    <div class="hc-answers" id="hc-answers">
+      <div class="hc-answers-empty">Answers will appear here when a round starts.</div>
+    </div>
+
+    <div class="hc-info-row">
+      <div class="hc-strikes" id="hc-strikes">
+        <div class="hc-strike">✕</div>
+        <div class="hc-strike">✕</div>
+        <div class="hc-strike">✕</div>
+      </div>
+      <div class="hc-team t1" id="hc-team1">
+        <span class="hc-team-name" id="hc-t1-name">Team 1</span>
+        <span class="hc-team-score" id="hc-t1-score">0</span>
+      </div>
+      <div class="hc-team t2" id="hc-team2">
+        <span class="hc-team-name" id="hc-t2-name">Team 2</span>
+        <span class="hc-team-score" id="hc-t2-score">0</span>
+      </div>
+    </div>
+
+    <div class="hc-actions" id="hc-actions">
+      <button class="hc-btn hc-begin hc-btn-wide hidden" id="b-proceed">▶ BEGIN GAME</button>
+      <button class="hc-btn hc-green"  id="b-start"  disabled>▶ START ROUND</button>
+      <button class="hc-btn hc-blue"   id="b-buzz1"  disabled>🔵 TEAM 1 BUZZ</button>
+      <button class="hc-btn hc-orange" id="b-buzz2"  disabled>🟠 TEAM 2 BUZZ</button>
+      <button class="hc-btn hc-red"    id="b-strike" disabled>✕ STRIKE</button>
+      <button class="hc-btn hc-blue"   id="b-pass"   disabled>⇄ PASS</button>
+      <button class="hc-btn hc-yellow" id="b-steal-ok" disabled>★ STEAL ✓</button>
+      <button class="hc-btn hc-red"    id="b-steal-no" disabled>★ STEAL ✕</button>
+      <button class="hc-btn hc-purple" id="b-reveal-all" disabled>⊞ REVEAL ALL</button>
+      <button class="hc-btn hc-orange" id="b-next"   disabled>→ NEXT ROUND</button>
+      <button class="hc-btn hc-gray hc-btn-wide" id="b-end" disabled>⏹ END GAME</button>
+    </div>
+
+    <p class="hc-note">
+      Tap an answer above to reveal it on the board · During a steal, tap the answer first, then STEAL ✓<br>
+      Keyboard: 1–8 reveal · S / X strike · A reveal all
+    </p>
+  </div>
+
+  <div id="hc-error" class="hc-error hidden"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const $ = (id) => document.getElementById(id);
+
+      const params   = new URLSearchParams(location.search);
+      const gameCode = (params.get('game') || '').toUpperCase();
+      const token    = params.get('token') || '';
+
+      if (!gameCode || !token) {
+        $('hc-main').classList.add('hidden');
+        const err = $('hc-error');
+        err.classList.remove('hidden');
+        err.innerHTML = '<strong>Invalid host link.</strong><br>Use the Host Control link shown on the game-code screen.';
+        return;
+      }
+
+      $('hc-code').textContent = gameCode;
+
+      // ── Local mirror of the board state ────────────────────
+      let phase = 'lobby';
+      let sync  = null;
+
+      // ── WebSocket ──────────────────────────────────────────
+      let ws = null;
+      let reconnectDelay = 1500;
+
+      function connect() {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${proto}://${location.host}`);
+
+        ws.onopen = () => {
+          reconnectDelay = 1500;
+          ws.send(JSON.stringify({ type: 'join', gameCode, role: 'control', token }));
+        };
+
+        ws.onmessage = (e) => {
+          let msg;
+          try { msg = JSON.parse(e.data); } catch { return; }
+
+          if (msg.type === 'error') {
+            $('hc-conn').textContent = 'Error';
+            $('hc-conn').className = 'hc-conn offline';
+            $('hc-status').textContent = msg.message;
+            return;
+          }
+
+          if (msg.type === 'joined') {
+            $('hc-conn').textContent = '● Connected';
+            $('hc-conn').className = 'hc-conn online';
+          }
+
+          if (msg.type === 'game-event') {
+            if (msg.phase) phase = msg.phase;
+            if (msg.sync)  sync  = msg.sync;
+            if (Array.isArray(msg.teamNames)) {
+              $('hc-t1-name').textContent = msg.teamNames[0];
+              $('hc-t2-name').textContent = msg.teamNames[1];
+            }
+            render();
+          }
+        };
+
+        ws.onclose = () => {
+          $('hc-conn').textContent = 'Reconnecting…';
+          $('hc-conn').className = 'hc-conn offline';
+          setTimeout(connect, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
+        };
+
+        ws.onerror = () => {};
+      }
+
+      connect();
+
+      function send(action, extra = {}) {
+        if (ws?.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({ type: 'control-action', action, ...extra }));
+      }
+
+      // ── Rendering ──────────────────────────────────────────
+      const phaseText = {
+        intro:     'Board is on the home screen',
+        lobby:     'Lobby — press BEGIN GAME when everyone is ready',
+        setup:     'Ready — press START ROUND',
+        faceoff:   'FACE-OFF! Tap the team that buzzed / answered first',
+        playing:   'In play — tap an answer to reveal, or STRIKE',
+        steal:     'STEAL! Tap the answer they said, then STEAL ✓ — or STEAL ✕',
+        revealAll: 'Revealing remaining answers…',
+        roundEnd:  'Round over — press NEXT ROUND',
+        fastMoney: 'Fast Money — control it from the main board screen',
+        gameEnd:   'Game over!',
+      };
+
+      function render() {
+        $('hc-status').textContent = phaseText[phase] || 'Waiting…';
+
+        const s = sync || {};
+
+        // Question + chips
+        $('hc-round').textContent = `ROUND ${(s.round ?? 0) + 1} / ${s.totalRounds ?? 4}`;
+        $('hc-mult').textContent  = `×${s.multiplier ?? 1}`;
+        $('hc-pts').textContent   = `POT: ${s.roundPoints ?? 0}`;
+        $('hc-question').textContent = s.question ||
+          (phase === 'lobby' ? 'Waiting for the game to begin…' : 'Waiting for the round to start…');
+
+        // Answers
+        const wrap = $('hc-answers');
+        wrap.innerHTML = '';
+        const answers = s.answers || [];
+        if (!answers.length) {
+          wrap.innerHTML = '<div class="hc-answers-empty">Answers will appear here when a round starts.</div>';
+        } else {
+          const canReveal = phase === 'playing' || phase === 'steal';
+          answers.forEach((a, i) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'hc-ans' + (a.revealed ? ' revealed' : '');
+            btn.disabled = a.revealed || !canReveal;
+            btn.innerHTML = `
+              <span class="hc-ans-num">${i + 1}</span>
+              <span class="hc-ans-text"></span>
+              <span class="hc-ans-pts">${a.points}</span>`;
+            btn.querySelector('.hc-ans-text').textContent = a.text;
+            btn.addEventListener('click', () => send('reveal', { ansId: a.id }));
+            wrap.appendChild(btn);
+          });
+        }
+
+        // Strikes
+        const strikes = s.strikes ?? 0;
+        [...$('hc-strikes').children].forEach((el, i) => {
+          el.classList.toggle('on', i < strikes);
+        });
+
+        // Scores + active team
+        $('hc-t1-score').textContent = s.scores?.[0] ?? 0;
+        $('hc-t2-score').textContent = s.scores?.[1] ?? 0;
+        const showActive = ['playing', 'steal', 'revealAll'].includes(phase);
+        $('hc-team1').classList.toggle('active', showActive && s.activeTeam === 0);
+        $('hc-team2').classList.toggle('active', showActive && s.activeTeam === 1);
+
+        // Buttons
+        const isPlaying = phase === 'playing';
+        const isSteal   = phase === 'steal';
+        const isFaceoff = phase === 'faceoff';
+
+        $('b-proceed').classList.toggle('hidden', phase !== 'lobby');
+        $('b-start').disabled      = phase !== 'setup';
+        $('b-start').textContent   = s.fastMoneyNext ? '★ FAST MONEY!' : '▶ START ROUND';
+        $('b-buzz1').disabled      = !isFaceoff;
+        $('b-buzz2').disabled      = !isFaceoff;
+        $('b-strike').disabled     = !isPlaying;
+        $('b-pass').disabled       = !isPlaying;
+        $('b-steal-ok').disabled   = !isSteal;
+        $('b-steal-no').disabled   = !isSteal;
+        $('b-reveal-all').disabled = !(isPlaying || isSteal);
+        $('b-next').disabled       = phase !== 'roundEnd';
+        $('b-end').disabled        = ['intro', 'lobby', 'gameEnd'].includes(phase);
+      }
+
+      // ── Wire buttons ───────────────────────────────────────
+      $('b-proceed').addEventListener('click', () => send('proceed'));
+      $('b-start').addEventListener('click', () => send('start-round'));
+      $('b-buzz1').addEventListener('click', () => send('buzz', { team: 0 }));
+      $('b-buzz2').addEventListener('click', () => send('buzz', { team: 1 }));
+      $('b-strike').addEventListener('click', () => send('strike'));
+      $('b-pass').addEventListener('click', () => send('pass'));
+      $('b-steal-ok').addEventListener('click', () => send('steal-correct'));
+      $('b-steal-no').addEventListener('click', () => send('steal-wrong'));
+      $('b-reveal-all').addEventListener('click', () => send('reveal-all'));
+      $('b-next').addEventListener('click', () => send('next-round'));
+      $('b-end').addEventListener('click', () => {
+        if (confirm('End the game now? The team with the highest score wins.')) send('end-game');
+      });
+
+      // ── Keyboard shortcuts ─────────────────────────────────
+      document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+        const key = e.key.toLowerCase();
+        if (/^[1-8]$/.test(key)) {
+          const a = (sync?.answers || [])[parseInt(key) - 1];
+          if (a && !a.revealed && (phase === 'playing' || phase === 'steal')) {
+            send('reveal', { ansId: a.id });
+          }
+        }
+        if ((key === 's' || key === 'x') && phase === 'playing') send('strike');
+        if (key === 'a' && (phase === 'playing' || phase === 'steal')) send('reveal-all');
+        if (key === 'q' && phase === 'faceoff') send('buzz', { team: 0 });
+        if (key === 'p' && phase === 'faceoff') send('buzz', { team: 1 });
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>

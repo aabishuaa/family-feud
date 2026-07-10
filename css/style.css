@@ -1174,100 +1174,6 @@ body::after {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   HOST CHEAT SHEET
-══════════════════════════════════════════════════════════════ */
-#cheatsheet {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  width: 320px;
-  max-width: calc(100vw - 32px);
-  max-height: 60vh;
-  background: linear-gradient(180deg, rgba(20,30,60,.96), rgba(8,14,35,.96));
-  border: 1px solid rgba(255,215,0,.4);
-  border-radius: 14px;
-  padding: 12px 14px;
-  z-index: 50;
-  box-shadow: 0 12px 40px rgba(0,0,0,.6), 0 0 24px rgba(255,215,0,.18);
-  display: flex; flex-direction: column;
-  font-family: 'Oswald', sans-serif;
-  transition: max-height .25s, padding .2s;
-}
-#cheatsheet.collapsed { max-height: 44px; overflow: hidden; padding-bottom: 0; }
-#cheatsheet.collapsed .cs-list,
-#cheatsheet.collapsed .cs-hint { display: none; }
-.cs-head {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 6px;
-}
-.cs-title {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 14px;
-  letter-spacing: .18em;
-  color: var(--gold);
-  text-shadow: 0 0 12px rgba(255,215,0,.4);
-}
-.cs-toggle {
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.12);
-  color: var(--gold);
-  width: 24px; height: 24px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  font-family: inherit;
-  display: flex; align-items: center; justify-content: center;
-}
-.cs-toggle:hover { background: rgba(255,215,0,.16); }
-.cs-hint {
-  font-size: 10px; letter-spacing: .1em;
-  color: var(--text-dim);
-  margin-bottom: 8px;
-}
-.cs-list {
-  display: flex; flex-direction: column; gap: 4px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-.cs-row {
-  display: grid;
-  grid-template-columns: 22px 1fr auto;
-  gap: 8px;
-  align-items: center;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
-  border-left: 3px solid rgba(255,215,0,.4);
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-family: inherit;
-  color: #fff;
-  cursor: pointer;
-  text-align: left;
-  font-size: 13px;
-  transition: background .2s, border-color .2s, transform .12s, opacity .25s;
-}
-.cs-row:hover { background: rgba(255,215,0,.12); border-left-color: var(--gold); transform: translateX(2px); }
-.cs-row:active { transform: scale(.98); }
-.cs-row.revealed {
-  opacity: .42;
-  background: rgba(0,200,80,.1);
-  border-left-color: rgba(0,200,80,.7);
-  cursor: default;
-  pointer-events: none;
-}
-.cs-rank { font-weight: 700; color: var(--gold); font-size: 12px; }
-.cs-text { font-weight: 500; letter-spacing: .04em; line-height: 1.25; }
-.cs-pts {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 16px;
-  color: var(--gold);
-  background: rgba(255,215,0,.12);
-  padding: 2px 8px;
-  border-radius: 4px;
-  letter-spacing: .04em;
-}
-
-/* ═══════════════════════════════════════════════════════════
    CODES SCREEN — link cards polish
 ══════════════════════════════════════════════════════════════ */
 .player-link-group {
@@ -1293,6 +1199,40 @@ body::after {
   padding: 7px 14px; font-size: 12px; font-weight: 600;
 }
 .btn-copy-link:active { transform: scale(.96); }
+
+/* Host control link card */
+.host-link-group {
+  width: 100%;
+  background: linear-gradient(180deg, rgba(255,215,0,.1), rgba(255,215,0,.03));
+  border: 1px solid rgba(255,215,0,.4);
+  border-left: 3px solid var(--gold);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.host-badge {
+  background: rgba(255,215,0,.2);
+  color: var(--gold);
+}
+.host-link-hint {
+  font-size: 11px; letter-spacing: .04em;
+  color: #b8a860; line-height: 1.5;
+}
+
+/* Back button (codes screen) */
+.btn-back {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-family: 'Oswald', sans-serif;
+  font-size: 12px; letter-spacing: .16em;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.btn-back:hover { color: var(--white); border-color: rgba(255,255,255,.35); background: rgba(255,255,255,.05); }
 
 /* ── Utility ──────────────────────────────────────────────── */
 .hidden { display: none !important; }

@@ -11,11 +11,15 @@ const Multiplayer = (() => {
   let hostToken  = null;
   let team1Url   = null;
   let team2Url   = null;
+  let hostUrl    = null;
   let connected  = false;
   const playerOnline = [false, false];
 
-  // Callback set by game.js so buzz events call into game logic
-  let onBuzz = null;
+  // Callbacks set by game.js
+  let onBuzz          = null;  // player phone buzzed in
+  let onControlAction = null;  // remote host panel pressed a button
+  let onControlJoined = null;  // a remote host panel connected (send it fresh state)
+  let onConnected     = null;  // this board finished joining the room
 
   // ── Room creation ─────────────────────────────────────────
   async function createRoom(packId) {
@@ -33,8 +37,9 @@ const Multiplayer = (() => {
       const base = window.location.origin;
       team1Url = `${base}/player.html?game=${gameCode}&team=0`;
       team2Url = `${base}/player.html?game=${gameCode}&team=1`;
+      hostUrl  = `${base}/host.html?game=${gameCode}&token=${hostToken}`;
 
-      return { gameCode, team1Url, team2Url };
+      return { gameCode, team1Url, team2Url, hostUrl };
     } catch {
       return null; // Server not available — fall back to local play
     }
@@ -57,6 +62,7 @@ const Multiplayer = (() => {
 
       if (msg.type === 'joined') {
         connected = true;
+        if (typeof onConnected === 'function') onConnected();
       }
 
       if (msg.type === 'player-joined') {
@@ -71,6 +77,14 @@ const Multiplayer = (() => {
 
       if (msg.type === 'buzz' && typeof onBuzz === 'function') {
         onBuzz(msg.team);
+      }
+
+      if (msg.type === 'control-action' && typeof onControlAction === 'function') {
+        onControlAction(msg);
+      }
+
+      if (msg.type === 'control-joined' && typeof onControlJoined === 'function') {
+        onControlJoined();
       }
     };
 
@@ -116,10 +130,14 @@ const Multiplayer = (() => {
     createRoom,
     connect,
     broadcast,
-    setOnBuzz(fn) { onBuzz = fn; },
+    setOnBuzz(fn)          { onBuzz = fn; },
+    setOnControlAction(fn) { onControlAction = fn; },
+    setOnControlJoined(fn) { onControlJoined = fn; },
+    setOnConnected(fn)     { onConnected = fn; },
     getGameCode()   { return gameCode; },
     getTeam1Url()   { return team1Url; },
     getTeam2Url()   { return team2Url; },
+    getHostUrl()    { return hostUrl; },
     isConnected()   { return connected; },
     isPlayerOnline(team) { return playerOnline[team]; },
   };

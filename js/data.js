@@ -12,8 +12,8 @@
 
 var DEFAULT_SETTINGS = {
   maxStrikes: 3,
-  totalRounds: 3,
-  roundMultipliers: [1, 2, 3],
+  totalRounds: 4,
+  roundMultipliers: [1, 2, 3, 4],
   fastMoneyTarget: 200,
   fastMoneyTimeP1: 20,
   fastMoneyTimeP2: 25,

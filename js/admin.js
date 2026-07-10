@@ -321,9 +321,9 @@
   // ── Settings ─────────────────────────────────────────────
   function renderSettings() {
     const s = currentPack.settings || {};
-    $('set-total-rounds').value = s.totalRounds ?? 3;
+    $('set-total-rounds').value = s.totalRounds ?? 4;
     $('set-max-strikes').value  = s.maxStrikes  ?? 3;
-    $('set-multipliers').value  = (s.roundMultipliers || [1, 2, 3]).join(', ');
+    $('set-multipliers').value  = (s.roundMultipliers || [1, 2, 3, 4]).join(', ');
     $('set-fm-target').value    = s.fastMoneyTarget ?? 200;
     $('set-fm-time1').value     = s.fastMoneyTimeP1 ?? 20;
     $('set-fm-time2').value     = s.fastMoneyTimeP2 ?? 25;
@@ -335,9 +335,9 @@
       .map((s) => parseFloat(s.trim()))
       .filter((n) => !isNaN(n) && n > 0);
     return {
-      totalRounds:    Math.max(1, Math.min(6, parseInt($('set-total-rounds').value) || 3)),
+      totalRounds:    Math.max(1, Math.min(6, parseInt($('set-total-rounds').value) || 4)),
       maxStrikes:     Math.max(1, Math.min(5, parseInt($('set-max-strikes').value)  || 3)),
-      roundMultipliers: mult.length ? mult : [1, 2, 3],
+      roundMultipliers: mult.length ? mult : [1, 2, 3, 4],
       fastMoneyTarget:  Math.max(50,  Math.min(500, parseInt($('set-fm-target').value)  || 200)),
       fastMoneyTimeP1:  Math.max(5,   Math.min(120, parseInt($('set-fm-time1').value)   || 20)),
       fastMoneyTimeP2:  Math.max(5,   Math.min(120, parseInt($('set-fm-time2').value)   || 25)),
