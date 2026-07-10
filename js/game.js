@@ -33,6 +33,7 @@
     confettiAnimId: null,
     selectedPackId: 'default',
     availablePacks: [],
+    roundPrepared: false, // board tiles laid out, waiting for START ROUND
   };
 
   // ── Phase transition ───────────────────────────────────────
@@ -163,21 +164,15 @@
     Sounds.theme();
     createStarfield();
     setPhase('setup');
-    updateStatusBar('Press START ROUND to begin Round 1!');
+    prepareRound(); // lay the face-down tiles on the board straight away
+    updateStatusBar('Press START ROUND to reveal the question and begin Round 1!');
   }
 
-  // ── ROUND SETUP ────────────────────────────────────────────
-  function startRound() {
-    if (state.phase !== 'setup') return;
-    // After all rounds are done, Start Round button launches fast money
-    if ($('btn-start-round').dataset.fastMoney === 'true') {
-      $('btn-start-round').dataset.fastMoney = '';
-      $('btn-start-round').textContent = '▶ START ROUND';
-      startFastMoney();
-      return;
-    }
-
-    // Pick next question
+  // ── ROUND PREP ─────────────────────────────────────────────
+  // Lay out the (face-down) board for the upcoming round without
+  // revealing the question — the board is shown first, then the host
+  // presses START ROUND to reveal the question and go live.
+  function prepareRound() {
     const roundIdx = state.usedRounds[state.round % state.usedRounds.length];
     state.currentRound = GAME_DATA.rounds[roundIdx];
     state.multiplier = GAME_DATA.settings.roundMultipliers[state.round] || 1;
@@ -186,19 +181,17 @@
     state.revealedAnswers = new Set();
     state.activeTeam = 0;
 
-    // Round banner
     $('round-number').textContent = state.round + 1;
     $('running-points').textContent = '0';
 
-    // Question
+    // Load the question text but keep it hidden until START ROUND
     $('question-text').textContent = state.currentRound.question;
-    $('question-text').classList.remove('hidden');
+    $('question-text').classList.add('hidden');
 
-    buildBoard(state.currentRound.answers);
+    buildBoard(state.currentRound.answers); // face-down numbered tiles
     resetStrikes();
     clearActiveTeam();
     updateTeamDisplays();
-    broadcastState(); // control panel sees the new question immediately
 
     if (state.multiplier > 1) {
       $('multiplier-badge').textContent = `×${state.multiplier}`;
@@ -207,12 +200,43 @@
       $('multiplier-badge').classList.add('hidden');
     }
 
+    state.roundPrepared = true;
+    broadcastState();
+  }
+
+  // ── START ROUND ────────────────────────────────────────────
+  function startRound() {
+    if (state.phase !== 'setup') return;
+    // After all rounds are done, Start Round button launches fast money
+    if ($('btn-start-round').dataset.fastMoney === 'true') {
+      $('btn-start-round').dataset.fastMoney = '';
+      $('btn-start-round').textContent = '';
+      setStartRoundLabel(false);
+      startFastMoney();
+      return;
+    }
+
+    // Ensure the board is laid out (normally done on screen entry)
+    if (!state.roundPrepared) prepareRound();
+
+    // Reveal the question — the round is now officially live
+    $('question-text').classList.remove('hidden');
+    state.roundPrepared = false;
+
     Sounds.surveySays();
     showOverlay(`ROUND ${state.round + 1}`, 1800);
     setTimeout(() => {
       setPhase('faceoff');
       updateStatusBar('Teams buzz in to start! Click your BUZZ button!');
     }, 1800);
+  }
+
+  // Swap the START ROUND button label between round / fast-money modes.
+  function setStartRoundLabel(fastMoney) {
+    const btn = $('btn-start-round');
+    btn.innerHTML = fastMoney
+      ? `${Icons.svg('star')}<span>FAST MONEY!</span>`
+      : `${Icons.svg('play')}<span>START ROUND</span>`;
   }
 
   // ── BOARD BUILDING ─────────────────────────────────────────
@@ -288,7 +312,10 @@
     revealAndEnd(state.activeTeam);
   }
 
-  // Reveal remaining tiles then award points to winnerIdx.
+  // Reveal remaining tiles for the audience, then award points to winnerIdx.
+  // IMPORTANT: only the points already IN PLAY on the board (revealed
+  // answers) are awarded. Unanswered answers are shown dimmed but do NOT
+  // add to the pot — this is the Family Feud steal rule.
   function revealAndEnd(winnerIdx) {
     setPhase('revealAll');
     Sounds.revealAll();
@@ -299,8 +326,7 @@
           const tile = $q(`.tile[data-ans-id="${ans.id}"]`);
           if (tile) {
             tile.classList.add('revealed', 'dimmed');
-            state.roundPoints += ans.points * state.multiplier;
-            state.revealedAnswers.add(ans.id);
+            state.revealedAnswers.add(ans.id); // shown, but points NOT added
             broadcastState();
           }
         }, i * 300);
@@ -308,8 +334,7 @@
     });
 
     const delay = state.currentRound.answers.length * 300;
-    setTimeout(() => animatePointsCounter($('running-points'), state.roundPoints), delay + 200);
-    setTimeout(() => endRound(winnerIdx), delay + 1000);
+    setTimeout(() => endRound(winnerIdx), delay + 900);
   }
 
   // ── ADD STRIKE ─────────────────────────────────────────────
@@ -395,11 +420,12 @@
     $('round-number').textContent = state.round + 1;
     if (state.round < GAME_DATA.settings.totalRounds) {
       setPhase('setup');
-      updateStatusBar(`Round ${state.round + 1} — Press START ROUND to continue.`);
+      prepareRound(); // lay out the next round's face-down board
+      updateStatusBar(`Round ${state.round + 1} — Press START ROUND to reveal the question.`);
     } else {
       setPhase('setup');
       updateStatusBar('All rounds complete! Press START ROUND to go to Fast Money!');
-      $('btn-start-round').textContent = '★ FAST MONEY!';
+      setStartRoundLabel(true);
       $('btn-start-round').dataset.fastMoney = 'true';
       broadcastState(); // let the control panel know Fast Money is next
     }
@@ -802,7 +828,8 @@
     state.teams[0].score = 0;
     state.teams[1].score = 0;
     state.round = 0;
-    $('btn-start-round').textContent = '▶ START ROUND';
+    state.roundPrepared = false;
+    setStartRoundLabel(false);
     $('btn-start-round').dataset.fastMoney = '';
     $('end-team1-box').classList.remove('winner-box');
     $('end-team2-box').classList.remove('winner-box');
@@ -820,7 +847,7 @@
   // ── MUTE TOGGLE ────────────────────────────────────────────
   function toggleMute() {
     const muted = Sounds.toggleMute();
-    $('btn-mute').textContent = muted ? '🔇' : '🔊';
+    $('btn-mute').innerHTML = Icons.svg(muted ? 'volumeOff' : 'volumeOn');
   }
 
   // ── KEYBOARD SHORTCUTS ─────────────────────────────────────
@@ -875,6 +902,10 @@
 
   // ── EVENT WIRING ───────────────────────────────────────────
   function init() {
+    // Replace all [data-icon] placeholders with inline SVG
+    if (window.Icons) Icons.hydrate(document);
+    setStartRoundLabel(false);
+
     // Intro
     $('btn-start-game').addEventListener('click', startGame);
     $('team1-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('team2-name-input').focus(); });

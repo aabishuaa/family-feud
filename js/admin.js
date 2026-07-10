@@ -15,8 +15,11 @@
   let currentPack = null;  // full pack of the one being edited
   let dirty = false;       // unsaved changes?
 
+  let roundQuery = ''; // current rounds search filter (lower-cased)
+
   // ── Boot ─────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
+    if (window.Icons) Icons.hydrate(document);
     createStarfield();
     wireGlobalUi();
     await refreshPackList();
@@ -57,7 +60,7 @@
       packs = data.packs || [];
     } catch (err) {
       // Server unreachable — fall back to seeds for read-only browsing
-      list.innerHTML = `<div class="pack-list-empty">⚠ Server unreachable — start with <code>npm start</code> to enable editing.</div>`;
+      list.innerHTML = `<div class="pack-list-empty">${Icons.svg('warning')} Server unreachable — start with <code>npm start</code> to enable editing.</div>`;
       packs = (window.GAME_PACK_SEEDS || []).map((p) => ({
         id: p.id, name: p.name, icon: p.icon, builtIn: p.builtIn,
         roundCount: p.rounds.length, fmCount: p.fastMoneyRounds?.[0]?.questions?.length || 0,
@@ -72,7 +75,7 @@
     const list = $('pack-list');
     list.innerHTML = '';
     if (!packs.length) {
-      list.innerHTML = '<div class="pack-list-empty">No game modes yet — click ＋ NEW MODE to create one.</div>';
+      list.innerHTML = '<div class="pack-list-empty">No game modes yet — click NEW MODE to create one.</div>';
       return;
     }
     packs.forEach((p) => {
@@ -121,6 +124,11 @@
     $('editor-content').classList.remove('hidden');
     const p = currentPack;
 
+    // Reset the rounds search when opening a different pack
+    roundQuery = '';
+    if ($('rounds-search')) $('rounds-search').value = '';
+    if ($('rounds-search-clear')) $('rounds-search-clear').classList.add('hidden');
+
     $('pack-icon').value = p.icon || '🎯';
     $('pack-name').value = p.name || '';
 
@@ -148,16 +156,45 @@
     // Re-enable name/icon to keep UX consistent (still saved when not readonly)
     $('pack-icon').disabled = readonly;
     $('pack-name').disabled = readonly;
+    // Search is a browse aid — always usable, even on read-only packs
+    if ($('rounds-search')) $('rounds-search').disabled = false;
   }
 
   function renderRounds() {
     const wrap = $('rounds-container');
     wrap.innerHTML = '';
-    if (!currentPack.rounds.length) {
-      wrap.innerHTML = '<div class="rounds-empty">No rounds yet — click ＋ ADD ROUND to start.</div>';
+    const total = currentPack.rounds.length;
+    const countEl = $('rounds-count');
+
+    if (!total) {
+      wrap.innerHTML = '<div class="rounds-empty">No rounds yet — click ADD ROUND to start.</div>';
+      if (countEl) countEl.textContent = '';
       return;
     }
-    currentPack.rounds.forEach((round, i) => wrap.appendChild(buildRoundCard(round, i)));
+
+    // Filter by the search query (matches question text or any answer text)
+    const q = roundQuery;
+    const matches = currentPack.rounds
+      .map((round, i) => ({ round, i }))
+      .filter(({ round }) => {
+        if (!q) return true;
+        if ((round.question || '').toLowerCase().includes(q)) return true;
+        return (round.answers || []).some((a) => (a.text || '').toLowerCase().includes(q));
+      });
+
+    if (countEl) {
+      countEl.textContent = q
+        ? `${matches.length} of ${total} shown`
+        : `${total} round${total === 1 ? '' : 's'}`;
+    }
+
+    if (!matches.length) {
+      wrap.innerHTML = `<div class="rounds-empty">No rounds match “${escapeHtml(q)}”.</div>`;
+      return;
+    }
+
+    // Keep original index so edits/reorder/delete stay correct
+    matches.forEach(({ round, i }) => wrap.appendChild(buildRoundCard(round, i)));
   }
 
   function buildRoundCard(round, idx) {
@@ -169,13 +206,13 @@
         <input class="round-question" type="text" value="${escapeAttr(round.question)}"
                placeholder="We surveyed 100 people…">
         <div class="round-actions">
-          <button class="icon-btn" data-act="up"     title="Move up">↑</button>
-          <button class="icon-btn" data-act="down"   title="Move down">↓</button>
-          <button class="icon-btn danger" data-act="delete" title="Delete round">🗑</button>
+          <button class="icon-btn" data-act="up"     title="Move up">${Icons.svg('chevUp')}</button>
+          <button class="icon-btn" data-act="down"   title="Move down">${Icons.svg('chevDown')}</button>
+          <button class="icon-btn danger" data-act="delete" title="Delete round">${Icons.svg('trash')}</button>
         </div>
       </div>
       <div class="answers-list"></div>
-      <button class="btn-add-answer">＋ ADD ANSWER</button>
+      <button class="btn-add-answer">${Icons.svg('plus')} ADD ANSWER</button>
     `;
 
     // Question input
@@ -212,7 +249,7 @@
       <span class="answer-rank">${idx + 1}</span>
       <input class="answer-text-input"   type="text"   value="${escapeAttr(ans.text)}"   placeholder="Answer text">
       <input class="answer-points-input" type="number" value="${ans.points}" min="0" max="100">
-      <button class="icon-btn danger" title="Delete">✕</button>
+      <button class="icon-btn danger" title="Delete">${Icons.svg('strike')}</button>
     `;
     const [textInput, ptsInput, delBtn] =
       [row.querySelector('.answer-text-input'), row.querySelector('.answer-points-input'), row.querySelector('button')];
@@ -253,7 +290,7 @@
     const questions = currentPack.fastMoneyRounds[0].questions;
 
     if (!questions.length) {
-      wrap.innerHTML = '<div class="rounds-empty">No fast money questions yet — click ＋ ADD FAST MONEY QUESTION.</div>';
+      wrap.innerHTML = '<div class="rounds-empty">No fast money questions yet — click ADD FAST MONEY QUESTION.</div>';
       return;
     }
     questions.forEach((q, i) => wrap.appendChild(buildFmCard(q, i)));
@@ -268,11 +305,11 @@
         <input class="round-question" type="text" value="${escapeAttr(q.question)}"
                placeholder="Fast money question…">
         <div class="round-actions">
-          <button class="icon-btn danger" data-act="delete-fm" title="Delete">🗑</button>
+          <button class="icon-btn danger" data-act="delete-fm" title="Delete">${Icons.svg('trash')}</button>
         </div>
       </div>
       <div class="answers-list"></div>
-      <button class="btn-add-answer">＋ ADD ANSWER</button>
+      <button class="btn-add-answer">${Icons.svg('plus')} ADD ANSWER</button>
     `;
     card.querySelector('.round-question').addEventListener('input', (e) => {
       q.question = e.target.value;
@@ -303,7 +340,7 @@
       <span class="answer-rank">${idx + 1}</span>
       <input class="answer-text-input"   type="text"   value="${escapeAttr(ans.text)}"   placeholder="Answer text">
       <input class="answer-points-input" type="number" value="${ans.points}" min="0" max="100">
-      <button class="icon-btn danger" title="Delete">✕</button>
+      <button class="icon-btn danger" title="Delete">${Icons.svg('strike')}</button>
     `;
     const [textInput, ptsInput, delBtn] =
       [row.querySelector('.answer-text-input'), row.querySelector('.answer-points-input'), row.querySelector('button')];
@@ -498,8 +535,30 @@
     });
     $('btn-duplicate').addEventListener('click', duplicatePack);
 
+    // Rounds search
+    const searchInput = $('rounds-search');
+    const searchClear = $('rounds-search-clear');
+    searchInput.addEventListener('input', () => {
+      roundQuery = searchInput.value.trim().toLowerCase();
+      searchClear.classList.toggle('hidden', !searchInput.value);
+      if (currentPack) renderRounds();
+    });
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      roundQuery = '';
+      searchClear.classList.add('hidden');
+      renderRounds();
+      searchInput.focus();
+    });
+
     $('btn-add-round').addEventListener('click', () => {
       if (!currentPack || currentPack.builtIn) return;
+      // Clear any active search so the newly-added round is visible
+      if (roundQuery) {
+        roundQuery = '';
+        searchInput.value = '';
+        searchClear.classList.add('hidden');
+      }
       const newId = (Math.max(0, ...currentPack.rounds.map((r) => r.id)) || 0) + 1;
       currentPack.rounds.push({
         id: newId,
@@ -508,6 +567,13 @@
       });
       markDirty();
       renderRounds();
+      // Scroll to and focus the new round's question field
+      const cards = $('rounds-container').querySelectorAll('.round-card');
+      const last = cards[cards.length - 1];
+      if (last) {
+        last.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        last.querySelector('.round-question')?.focus();
+      }
     });
 
     $('btn-add-fm').addEventListener('click', () => {

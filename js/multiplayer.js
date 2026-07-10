@@ -111,11 +111,11 @@ const Multiplayer = (() => {
     const s0 = document.getElementById('mp-p0-status');
     const s1 = document.getElementById('mp-p1-status');
     if (s0) {
-      s0.textContent = playerOnline[0] ? '● Connected' : '○ Waiting for player…';
+      s0.innerHTML = `<span class="status-dot"></span> ${playerOnline[0] ? 'Connected' : 'Waiting for player…'}`;
       s0.classList.toggle('mp-connected', playerOnline[0]);
     }
     if (s1) {
-      s1.textContent = playerOnline[1] ? '● Connected' : '○ Waiting for player…';
+      s1.innerHTML = `<span class="status-dot"></span> ${playerOnline[1] ? 'Connected' : 'Waiting for player…'}`;
       s1.classList.toggle('mp-connected', playerOnline[1]);
     }
 

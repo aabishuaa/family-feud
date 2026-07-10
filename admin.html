@@ -23,7 +23,7 @@
       <div class="admin-tag">ADMIN</div>
     </div>
     <nav class="admin-nav">
-      <a href="index.html" class="admin-link">← Back to Game</a>
+      <a href="index.html" class="admin-link"><i class="ico" data-icon="arrowLeft"></i> Back to Game</a>
     </nav>
   </header>
 
@@ -35,13 +35,13 @@
       <div id="pack-list" class="pack-list">
         <div class="pack-list-empty">Loading…</div>
       </div>
-      <button id="btn-new-pack" class="btn-admin btn-primary-admin">＋ NEW MODE</button>
+      <button id="btn-new-pack" class="btn-admin btn-primary-admin"><i class="ico" data-icon="plus"></i> NEW MODE</button>
     </aside>
 
     <!-- RIGHT: Editor -->
     <section class="admin-editor" id="editor">
       <div class="editor-empty" id="editor-empty">
-        <div class="editor-empty-icon">📝</div>
+        <div class="editor-empty-icon"><i class="ico" data-icon="pencil"></i></div>
         <div class="editor-empty-title">Select a Game Mode</div>
         <div class="editor-empty-hint">Pick a mode on the left to view or edit its questions, or create a new one.</div>
       </div>
@@ -58,14 +58,15 @@
             <div class="editor-stats" id="editor-stats">— rounds · — fast money</div>
           </div>
           <div class="editor-actions">
-            <button class="btn-admin btn-ghost"  id="btn-cancel">↻ RELOAD</button>
-            <button class="btn-admin btn-danger" id="btn-delete">🗑 DELETE</button>
-            <button class="btn-admin btn-save"   id="btn-save">💾 SAVE CHANGES</button>
+            <button class="btn-admin btn-ghost"  id="btn-cancel"><i class="ico" data-icon="reload"></i> RELOAD</button>
+            <button class="btn-admin btn-danger" id="btn-delete"><i class="ico" data-icon="trash"></i> DELETE</button>
+            <button class="btn-admin btn-save"   id="btn-save"><i class="ico" data-icon="save"></i> SAVE CHANGES</button>
           </div>
         </div>
 
         <div id="readonly-banner" class="readonly-banner hidden">
-          🔒 This is a built-in pack. Make a copy with the “Duplicate” button to edit your own version.
+          <i class="ico" data-icon="lock"></i>
+          <span>This is a built-in pack. Make a copy with the “Duplicate” button to edit your own version.</span>
           <button class="btn-admin btn-ghost-small" id="btn-duplicate">DUPLICATE</button>
         </div>
 
@@ -78,15 +79,23 @@
 
         <!-- Rounds tab -->
         <div class="tab-panel active" data-tab-panel="rounds">
+          <div class="rounds-toolbar">
+            <div class="search-box">
+              <i class="ico search-ico" data-icon="search"></i>
+              <input type="text" id="rounds-search" placeholder="Search questions or answers…" autocomplete="off">
+              <button class="search-clear hidden" id="rounds-search-clear" title="Clear"><i class="ico" data-icon="strike"></i></button>
+            </div>
+            <span class="rounds-count" id="rounds-count"></span>
+          </div>
           <div id="rounds-container" class="rounds-container"></div>
-          <button class="btn-admin btn-add-round" id="btn-add-round">＋ ADD ROUND</button>
+          <button class="btn-admin btn-add-round" id="btn-add-round"><i class="ico" data-icon="plus"></i> ADD ROUND</button>
         </div>
 
         <!-- Fast Money tab -->
         <div class="tab-panel" data-tab-panel="fastmoney">
           <div class="fm-help">Fast Money rounds — up to 5 short questions with 5 answers each, surveyed-style.</div>
           <div id="fm-container" class="fm-container"></div>
-          <button class="btn-admin btn-add-round" id="btn-add-fm">＋ ADD FAST MONEY QUESTION</button>
+          <button class="btn-admin btn-add-round" id="btn-add-fm"><i class="ico" data-icon="plus"></i> ADD FAST MONEY QUESTION</button>
         </div>
 
         <!-- Settings tab -->
@@ -145,6 +154,7 @@
     </div>
   </div>
 
+  <script src="js/icons.js"></script>
   <script src="js/data.js"></script>
   <script src="js/admin.js"></script>
 </body>
