@@ -362,8 +362,8 @@
     $('set-max-strikes').value  = s.maxStrikes  ?? 3;
     $('set-multipliers').value  = (s.roundMultipliers || [1, 2, 3, 4]).join(', ');
     $('set-fm-target').value    = s.fastMoneyTarget ?? 200;
-    $('set-fm-time1').value     = s.fastMoneyTimeP1 ?? 20;
-    $('set-fm-time2').value     = s.fastMoneyTimeP2 ?? 25;
+    $('set-fm-time1').value     = s.fastMoneyTimeP1 ?? 30;
+    $('set-fm-time2').value     = s.fastMoneyTimeP2 ?? 30;
   }
 
   function readSettings() {
@@ -376,8 +376,8 @@
       maxStrikes:     Math.max(1, Math.min(5, parseInt($('set-max-strikes').value)  || 3)),
       roundMultipliers: mult.length ? mult : [1, 2, 3, 4],
       fastMoneyTarget:  Math.max(50,  Math.min(500, parseInt($('set-fm-target').value)  || 200)),
-      fastMoneyTimeP1:  Math.max(5,   Math.min(120, parseInt($('set-fm-time1').value)   || 20)),
-      fastMoneyTimeP2:  Math.max(5,   Math.min(120, parseInt($('set-fm-time2').value)   || 25)),
+      fastMoneyTimeP1:  Math.max(5,   Math.min(120, parseInt($('set-fm-time1').value)   || 30)),
+      fastMoneyTimeP2:  Math.max(5,   Math.min(120, parseInt($('set-fm-time2').value)   || 30)),
     };
   }
 

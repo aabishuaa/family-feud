@@ -894,25 +894,111 @@ body::after {
 @keyframes winPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.09); } }
 
 .fm-controls-box { display: flex; flex-direction: column; gap: 7px; }
-.fm-answer-form  { display: flex; flex-direction: column; gap: 5px; }
-.fm-answer-form.hidden { display: none; }
-.fm-answer-row   { display: flex; gap: 5px; align-items: center; }
-#fm-ans-input {
-  flex: 1; padding: 7px 10px;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.12); border-radius: 6px;
-  color: #fff; font-family: 'Oswald', sans-serif; font-size: 14px;
+
+/* ── Fast Money main column (entry / board / idle views) ─── */
+.fm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+#fm-idle-view {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  text-align: center;
 }
-#fm-ans-input:focus { outline: none; border-color: var(--blue-glow); }
-#fm-pts-input {
-  width: 76px; padding: 7px 8px;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,215,0,.28); border-radius: 6px;
-  color: var(--gold); font-family: 'Oswald', sans-serif;
-  font-size: 15px; font-weight: 700; text-align: center;
+.fm-idle-text {
+  font-size: 17px; letter-spacing: .06em; line-height: 1.8;
+  color: var(--text-dim);
+  background: rgba(255,255,255,.04);
+  border: 2px dashed rgba(255,255,255,.14);
+  border-radius: 16px;
+  padding: 36px 48px;
 }
-#fm-pts-input:focus { outline: none; border-color: var(--gold); }
-.fm-grade-row  { display: flex; gap: 5px; }
+.fm-idle-text b { color: var(--gold); }
+
+/* Entry view — one big question + answer box */
+#fm-entry-view {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 26px;
+  padding: 20px;
+}
+#fm-entry-view.hidden { display: none; }
+.fm-entry-num {
+  font-size: 13px; letter-spacing: .3em; font-weight: 600;
+  color: var(--gold);
+  background: rgba(255,215,0,.1);
+  border: 1px solid rgba(255,215,0,.35);
+  padding: 6px 18px; border-radius: 24px;
+}
+.fm-entry-question {
+  font-size: clamp(22px, 3vw, 36px);
+  font-weight: 600; text-align: center; line-height: 1.35;
+  max-width: 820px;
+  color: var(--white);
+  animation: fmQuestionPop .3s cubic-bezier(.34,1.4,.64,1);
+}
+@keyframes fmQuestionPop {
+  from { transform: scale(.92); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.fm-entry-input-wrap { width: min(560px, 90%); }
+#fm-entry-input {
+  width: 100%;
+  padding: 16px 22px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 22px; font-weight: 600; text-align: center;
+  color: var(--white);
+  background: rgba(255,255,255,.06);
+  border: 2px solid rgba(255,215,0,.4);
+  border-radius: 14px;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+#fm-entry-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 26px rgba(255,215,0,.25);
+}
+.fm-entry-hint {
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* Covered (not yet revealed) answer & points cells */
+.fm-covered {
+  background: linear-gradient(160deg, #102488 0%, #1a3aaa 55%, #0c1e70 100%) !important;
+  border-color: #2e5ee0 !important;
+  color: transparent !important;
+  min-height: 26px;
+}
+.fm-said-reveal { animation: fmSaidPop .35s cubic-bezier(.34,1.4,.64,1); }
+@keyframes fmSaidPop {
+  from { transform: scale(.8); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+
+/* Grading controls */
+.fm-grading-box {
+  display: flex; flex-direction: column; gap: 7px;
+  background: rgba(255,215,0,.06);
+  border: 1px solid rgba(255,215,0,.3);
+  border-radius: 10px;
+  padding: 10px;
+}
+.fm-grading-box.hidden { display: none; }
+.fm-grading-label {
+  font-size: 10px; letter-spacing: .22em; text-align: center;
+  color: var(--gold); font-weight: 700;
+}
+.fm-match-wrap { display: flex; flex-direction: column; gap: 7px; }
+.fm-match-wrap.hidden { display: none; }
+.fm-match-hint {
+  font-size: 11px; letter-spacing: .04em; line-height: 1.45;
+  color: #b8a860;
+}
+#fm-bank-select {
+  width: 100%; padding: 9px 10px;
+  background: #0d1730;
+  border: 1px solid rgba(255,215,0,.35); border-radius: 6px;
+  color: var(--white);
+  font-family: 'Oswald', sans-serif; font-size: 13px;
+}
+#fm-bank-select:focus { outline: none; border-color: var(--gold); }
 
 #fm-result-banner {
   width: 100%; text-align: center;

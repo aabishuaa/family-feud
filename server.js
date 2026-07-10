@@ -43,19 +43,28 @@ let PACKS = loadPacks();
 if (!PACKS) {
   PACKS = JSON.parse(JSON.stringify(GAME_PACK_SEEDS));
 } else {
-  // Refresh built-in packs from seeds (they're read-only, so seeds are the source of truth)
-  for (const seed of GAME_PACK_SEEDS.filter((s) => s.builtIn)) {
+  // Refresh built-in packs from seeds (they're read-only, so seeds are the source of truth),
+  // and add any NEW seed packs (e.g. EY TECH) that the stored file doesn't know about yet.
+  for (const seed of GAME_PACK_SEEDS) {
     const idx = PACKS.findIndex((p) => p.id === seed.id);
-    if (idx >= 0) PACKS[idx] = JSON.parse(JSON.stringify(seed));
-    else PACKS.unshift(JSON.parse(JSON.stringify(seed)));
+    if (seed.builtIn) {
+      if (idx >= 0) PACKS[idx] = JSON.parse(JSON.stringify(seed));
+      else PACKS.unshift(JSON.parse(JSON.stringify(seed)));
+    } else if (idx === -1) {
+      PACKS.push(JSON.parse(JSON.stringify(seed)));
+    }
   }
-  // Migrate custom packs still carrying the old 3-round defaults to the new 4-round structure
+  // Migrate custom packs still carrying old defaults
   for (const p of PACKS) {
     if (p.builtIn) continue;
     const s = p.settings || {};
     if (s.totalRounds === 3 && (s.roundMultipliers || []).join(',') === '1,2,3') {
       s.totalRounds = DEFAULT_SETTINGS.totalRounds;
       s.roundMultipliers = [...DEFAULT_SETTINGS.roundMultipliers];
+    }
+    if (s.fastMoneyTimeP1 === 20 && s.fastMoneyTimeP2 === 25) {
+      s.fastMoneyTimeP1 = DEFAULT_SETTINGS.fastMoneyTimeP1;
+      s.fastMoneyTimeP2 = DEFAULT_SETTINGS.fastMoneyTimeP2;
     }
   }
 }
