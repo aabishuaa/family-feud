@@ -319,7 +319,9 @@
       <button class="hc-btn hc-blue"   id="b-buzz1"  disabled><span>TEAM 1 BUZZ</span></button>
       <button class="hc-btn hc-orange" id="b-buzz2"  disabled><span>TEAM 2 BUZZ</span></button>
       <button class="hc-btn hc-red"    id="b-strike" disabled><i class="ico" data-icon="strike"></i><span>STRIKE</span></button>
-      <button class="hc-btn hc-blue"   id="b-pass"   disabled><i class="ico" data-icon="swap"></i><span>PASS</span></button>
+      <button class="hc-btn hc-green"  id="b-choose-play" disabled><i class="ico" data-icon="play"></i><span>PLAY</span></button>
+      <button class="hc-btn hc-blue"   id="b-choose-pass" disabled><i class="ico" data-icon="swap"></i><span>PASS TO THEM</span></button>
+      <button class="hc-btn hc-blue"   id="b-pass"   disabled><i class="ico" data-icon="swap"></i><span>SWITCH TEAM</span></button>
       <button class="hc-btn hc-yellow" id="b-steal-ok" disabled><i class="ico" data-icon="check"></i><span>STEAL OK</span></button>
       <button class="hc-btn hc-red"    id="b-steal-no" disabled><i class="ico" data-icon="strike"></i><span>STEAL NO</span></button>
       <button class="hc-btn hc-purple" id="b-reveal-all" disabled><i class="ico" data-icon="grid"></i><span>REVEAL ALL</span></button>
@@ -423,7 +425,7 @@
         intro:     'Board is on the home screen',
         lobby:     'Lobby — press BEGIN GAME when everyone is ready',
         setup:     'Ready — press START ROUND',
-        faceoff:   'FACE-OFF! Tap the team that buzzed / answered first',
+        faceoff:   'FACE-OFF! Tap the team that buzzed first',
         playing:   'In play — tap an answer to reveal, or STRIKE',
         steal:     'STEAL! Tap the answer they said, then STEAL OK — or STEAL NO',
         revealAll: 'Revealing remaining answers…',
@@ -432,10 +434,26 @@
         gameEnd:   'Game over!',
       };
 
-      function render() {
-        $('hc-status').textContent = phaseText[phase] || 'Waiting…';
+      // Phases whose message names a team
+      function dynamicPhaseText(s, names) {
+        if (phase === 'faceoffAnswer') {
+          const t = names[s.faceoffTurn] || 'the team';
+          return `FACE-OFF: ${t} answers — tap it on the board, or STRIKE`;
+        }
+        if (phase === 'passOrPlay') {
+          const w = names[s.faceoffWinner] || 'Winner';
+          return `${w} won the face-off — PLAY or PASS TO THEM?`;
+        }
+        return phaseText[phase] || 'Waiting…';
+      }
 
+      function render() {
         const s = sync || {};
+        const names = [
+          document.getElementById('hc-t1-name').textContent,
+          document.getElementById('hc-t2-name').textContent,
+        ];
+        $('hc-status').textContent = dynamicPhaseText(s, names);
 
         // Question + chips
         $('hc-round').textContent = `ROUND ${(s.round ?? 0) + 1} / ${s.totalRounds ?? 4}`;
@@ -451,7 +469,7 @@
         if (!answers.length) {
           wrap.innerHTML = '<div class="hc-answers-empty">Answers will appear here when a round starts.</div>';
         } else {
-          const canReveal = phase === 'playing' || phase === 'steal';
+          const canReveal = phase === 'playing' || phase === 'steal' || phase === 'faceoffAnswer';
           answers.forEach((a, i) => {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -476,21 +494,25 @@
         // Scores + active team
         $('hc-t1-score').textContent = s.scores?.[0] ?? 0;
         $('hc-t2-score').textContent = s.scores?.[1] ?? 0;
-        const showActive = ['playing', 'steal', 'revealAll'].includes(phase);
+        const showActive = ['playing', 'steal', 'revealAll', 'faceoffAnswer', 'passOrPlay'].includes(phase);
         $('hc-team1').classList.toggle('active', showActive && s.activeTeam === 0);
         $('hc-team2').classList.toggle('active', showActive && s.activeTeam === 1);
 
         // Buttons
-        const isPlaying = phase === 'playing';
-        const isSteal   = phase === 'steal';
-        const isFaceoff = phase === 'faceoff';
+        const isPlaying  = phase === 'playing';
+        const isSteal    = phase === 'steal';
+        const isFaceoff  = phase === 'faceoff';
+        const isFoAnswer = phase === 'faceoffAnswer';
+        const isChoosing = phase === 'passOrPlay';
 
         $('b-proceed').classList.toggle('hidden', phase !== 'lobby');
         $('b-start').disabled      = phase !== 'setup';
-        $('b-start').textContent   = s.fastMoneyNext ? '★ FAST MONEY!' : '▶ START ROUND';
+        $('b-start').querySelector('span').textContent = s.fastMoneyNext ? 'FAST MONEY!' : 'START ROUND';
         $('b-buzz1').disabled      = !isFaceoff;
         $('b-buzz2').disabled      = !isFaceoff;
-        $('b-strike').disabled     = !isPlaying;
+        $('b-strike').disabled     = !(isPlaying || isFoAnswer);
+        $('b-choose-play').disabled = !isChoosing;
+        $('b-choose-pass').disabled = !isChoosing;
         $('b-pass').disabled       = !isPlaying;
         $('b-steal-ok').disabled   = !isSteal;
         $('b-steal-no').disabled   = !isSteal;
@@ -505,6 +527,8 @@
       $('b-buzz1').addEventListener('click', () => send('buzz', { team: 0 }));
       $('b-buzz2').addEventListener('click', () => send('buzz', { team: 1 }));
       $('b-strike').addEventListener('click', () => send('strike'));
+      $('b-choose-play').addEventListener('click', () => send('choose-play'));
+      $('b-choose-pass').addEventListener('click', () => send('choose-pass'));
       $('b-pass').addEventListener('click', () => send('pass'));
       $('b-steal-ok').addEventListener('click', () => send('steal-correct'));
       $('b-steal-no').addEventListener('click', () => send('steal-wrong'));
@@ -520,11 +544,11 @@
         const key = e.key.toLowerCase();
         if (/^[1-8]$/.test(key)) {
           const a = (sync?.answers || [])[parseInt(key) - 1];
-          if (a && !a.revealed && (phase === 'playing' || phase === 'steal')) {
+          if (a && !a.revealed && (phase === 'playing' || phase === 'steal' || phase === 'faceoffAnswer')) {
             send('reveal', { ansId: a.id });
           }
         }
-        if ((key === 's' || key === 'x') && phase === 'playing') send('strike');
+        if ((key === 's' || key === 'x') && (phase === 'playing' || phase === 'faceoffAnswer')) send('strike');
         if (key === 'a' && (phase === 'playing' || phase === 'steal')) send('reveal-all');
         if (key === 'q' && phase === 'faceoff') send('buzz', { team: 0 });
         if (key === 'p' && phase === 'faceoff') send('buzz', { team: 1 });

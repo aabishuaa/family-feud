@@ -37,6 +37,10 @@
     selectedPackId: 'default',
     availablePacks: [],
     roundPrepared: false, // board tiles laid out, waiting for START ROUND
+    // Face-off tracking (show rules):
+    //   stage 'first'  → the team that buzzed is answering
+    //   stage 'second' → the other team answers to try to beat it
+    faceoff: { firstTeam: -1, turn: -1, stage: 'buzz', firstRank: -1, winner: -1 },
   };
 
   // ── Phase transition ───────────────────────────────────────
@@ -73,6 +77,8 @@
         roundPoints: state.roundPoints,
         scores:      [state.teams[0].score, state.teams[1].score],
         activeTeam:  state.activeTeam,
+        faceoffTurn:   state.faceoff.turn,
+        faceoffWinner: state.faceoff.winner,
         fastMoneyNext: $('btn-start-round')?.dataset.fastMoney === 'true',
       },
     });
@@ -203,6 +209,7 @@
       $('multiplier-badge').classList.add('hidden');
     }
 
+    state.faceoff = { firstTeam: -1, turn: -1, stage: 'buzz', firstRank: -1, winner: -1 };
     state.roundPrepared = true;
     broadcastState();
   }
@@ -267,7 +274,9 @@
         </div>`;
 
       tile.addEventListener('click', () => {
-        if (state.phase === 'playing' || state.phase === 'steal') {
+        if (state.phase === 'faceoffAnswer') {
+          faceoffReveal(ans.id);
+        } else if (state.phase === 'playing' || state.phase === 'steal') {
           revealAnswer(ans.id);
         }
       });
@@ -303,8 +312,12 @@
     // Floating points bubble
     spawnPointsBubble(tile, `+${pts}`);
 
-    // Check board cleared
-    if (state.revealedAnswers.size === state.currentRound.answers.length) {
+    // Check board cleared (only ends the round during actual play —
+    // face-off reveals can never clear the board on their own)
+    if (
+      state.revealedAnswers.size === state.currentRound.answers.length &&
+      (state.phase === 'playing' || state.phase === 'steal')
+    ) {
       setTimeout(() => endRound(state.activeTeam), 1200);
     }
   }
@@ -342,6 +355,8 @@
 
   // ── ADD STRIKE ─────────────────────────────────────────────
   function addStrike() {
+    // During a face-off, a strike passes the answer to the other team
+    if (state.phase === 'faceoffAnswer') { faceoffStrike(); return; }
     if (state.phase !== 'playing') return;
     if (state.strikes >= GAME_DATA.settings.maxStrikes) return;
 
@@ -385,12 +400,16 @@
     setTimeout(() => revealAndEnd(winner), 2200);
   }
 
-  // ── PASS CONTROL ───────────────────────────────────────────
+  // ── PASS CONTROL (mid-round host override) ─────────────────
+  // Each team plays with its own set of strikes, so passing control
+  // also refreshes the strikes.
   function passControl() {
     if (state.phase !== 'playing') return;
     state.activeTeam = 1 - state.activeTeam;
     setActiveTeam(state.activeTeam);
-    updateStatusBar(`${state.teams[state.activeTeam].name} is now playing!`);
+    state.strikes = 0;
+    renderStrikes();
+    updateStatusBar(`${state.teams[state.activeTeam].name} is now playing with fresh strikes!`);
     broadcastState();
   }
 
@@ -485,29 +504,138 @@
     $('team2-active-badge').classList.add('hidden');
   }
 
-  // ── BUZZ IN ────────────────────────────────────────────────
+  // ── FACE-OFF (show rules) ──────────────────────────────────
+  // 1. First team to buzz gives an answer.
+  //    · Top answer → they win the face-off outright.
+  //    · Any other board answer → the other team answers too; the
+  //      HIGHER answer wins the face-off.
+  //    · Strike → the other team gets the face-off answer instead.
+  // 2. The face-off winner chooses PLAY or PASS.
+  // 3. Whoever plays starts with a fresh set of strikes — face-off
+  //    strikes never carry into the round.
+
   function buzzIn(teamIdx) {
     if (state.phase !== 'faceoff') return;
     Sounds.buzzIn();
+    state.faceoff.firstTeam = teamIdx;
+    state.faceoff.turn = teamIdx;
+    state.faceoff.stage = 'first';
+    state.faceoff.firstRank = -1;
     setActiveTeam(teamIdx);
+    setPhase('faceoffAnswer');
+    updateStatusBar(
+      `${state.teams[teamIdx].name} buzzed first! Reveal their answer, or STRIKE if it's not on the board.`
+    );
+  }
+
+  // Host reveals the answering team's guess during the face-off.
+  function faceoffReveal(ansId) {
+    if (state.phase !== 'faceoffAnswer') return;
+    const fo = state.faceoff;
+    const rank = state.currentRound.answers.findIndex((a) => a.id === ansId);
+    if (rank === -1 || state.revealedAnswers.has(ansId)) return;
+
+    revealAnswer(ansId); // flips the tile, adds points to the pot
+
+    if (fo.stage === 'first') {
+      fo.firstRank = rank;
+      if (rank === 0) {
+        // Top answer — face-off won outright
+        faceoffWon(fo.firstTeam);
+      } else {
+        // Other team gets a chance to beat it
+        fo.stage = 'second';
+        fo.turn = 1 - fo.firstTeam;
+        setActiveTeam(fo.turn);
+        updateStatusBar(
+          `${state.teams[fo.turn].name}, can you beat it? Reveal their answer, or STRIKE.`
+        );
+        broadcastState();
+      }
+    } else {
+      // Second answer revealed — higher rank (lower index) wins.
+      // If the first team struck (firstRank -1), any answer wins.
+      const winner = (fo.firstRank === -1 || rank < fo.firstRank)
+        ? fo.turn
+        : fo.firstTeam;
+      faceoffWon(winner);
+    }
+  }
+
+  // The answering team's guess wasn't on the board.
+  function faceoffStrike() {
+    if (state.phase !== 'faceoffAnswer') return;
+    const fo = state.faceoff;
+    Sounds.wrong();
+    showOverlay('STRIKE!', 900);
+
+    if (fo.stage === 'first') {
+      // Face-off passes straight to the other team
+      fo.firstRank = -1;
+      fo.stage = 'second';
+      fo.turn = 1 - fo.firstTeam;
+      setActiveTeam(fo.turn);
+      setTimeout(() => {
+        updateStatusBar(`${state.teams[fo.turn].name}'s turn to answer the face-off!`);
+      }, 900);
+      broadcastState();
+    } else if (fo.firstRank >= 0) {
+      // Second team struck but the first team has an answer up — first team wins
+      faceoffWon(fo.firstTeam);
+    } else {
+      // Both struck — keep alternating until someone lands an answer
+      fo.turn = 1 - fo.turn;
+      setActiveTeam(fo.turn);
+      setTimeout(() => {
+        updateStatusBar(`Still nobody on the board — back to ${state.teams[fo.turn].name}!`);
+      }, 900);
+      broadcastState();
+    }
+  }
+
+  function faceoffWon(teamIdx) {
+    state.faceoff.winner = teamIdx;
+    setActiveTeam(teamIdx);
+    Sounds.correct();
+    setPhase('passOrPlay'); // switch immediately so stray taps can't re-enter the face-off
+    showOverlay(`${state.teams[teamIdx].name.toUpperCase()}\nWINS THE FACE-OFF!`, 2000);
+    updateStatusBar(`${state.teams[teamIdx].name} — PLAY the board or PASS to the other team?`);
+  }
+
+  // Face-off winner's decision. Whoever plays gets fresh strikes.
+  function chooseControl(play) {
+    if (state.phase !== 'passOrPlay') return;
+    const winner = state.faceoff.winner;
+    const playingTeam = play ? winner : 1 - winner;
+    state.activeTeam = playingTeam;
+    setActiveTeam(playingTeam);
+    state.strikes = 0;
+    renderStrikes();
+    Sounds.buzzIn();
     setPhase('playing');
-    $('team1-buzz-btn').disabled = true;
-    $('team2-buzz-btn').disabled = true;
-    updateStatusBar(`${state.teams[teamIdx].name} buzzes in! Click a tile to reveal!`);
+    showOverlay(
+      play
+        ? `${state.teams[playingTeam].name.toUpperCase()}\nPLAYS!`
+        : `PASSED!\n${state.teams[playingTeam].name.toUpperCase()} PLAYS!`,
+      1600
+    );
+    updateStatusBar(`${state.teams[playingTeam].name} is playing with fresh strikes!`);
   }
 
   // ── STATUS BAR ─────────────────────────────────────────────
   const statusMessages = {
-    intro:     '',
-    lobby:     'Waiting for players to join…',
-    setup:     'Press START ROUND to begin!',
-    faceoff:   'Both teams ready — click BUZZ to ring in!',
-    playing:   'Click a tile to reveal an answer, or hit STRIKE for a wrong answer.',
-    steal:     'Steal attempt — click correct tile, or STEAL WRONG if incorrect.',
-    revealAll: 'Revealing all answers…',
-    roundEnd:  'Round over! Points awarded.',
-    fastMoney: 'FAST MONEY round!',
-    gameEnd:   '',
+    intro:         '',
+    lobby:         'Waiting for players to join…',
+    setup:         'Press START ROUND to begin!',
+    faceoff:       'FACE-OFF! First team to buzz answers first!',
+    faceoffAnswer: 'Reveal the answering team\'s guess, or STRIKE if it\'s not up there.',
+    passOrPlay:    'Face-off won — choose PLAY or PASS!',
+    playing:       'Click a tile to reveal an answer, or hit STRIKE for a wrong answer.',
+    steal:         'Steal attempt — click correct tile, or STEAL WRONG if incorrect.',
+    revealAll:     'Revealing all answers…',
+    roundEnd:      'Round over! Points awarded.',
+    fastMoney:     'FAST MONEY round!',
+    gameEnd:       '',
   };
 
   function updateStatusBar(msg) {
@@ -517,13 +645,17 @@
   // ── CONTROL BUTTONS ────────────────────────────────────────
   function updateControlButtons() {
     const p = state.phase;
-    const isPlaying = p === 'playing';
-    const isSteal   = p === 'steal';
-    const isFaceoff = p === 'faceoff';
+    const isPlaying   = p === 'playing';
+    const isSteal     = p === 'steal';
+    const isFaceoff   = p === 'faceoff';
+    const isFoAnswer  = p === 'faceoffAnswer';
+    const isChoosing  = p === 'passOrPlay';
 
     $('btn-start-round').disabled    = p !== 'setup';
-    $('btn-strike').disabled         = !isPlaying;
+    $('btn-strike').disabled         = !(isPlaying || isFoAnswer);
     $('btn-pass').disabled           = !isPlaying;
+    $('btn-choose-play').disabled    = !isChoosing;
+    $('btn-choose-pass').disabled    = !isChoosing;
     $('btn-steal-correct').disabled  = !isSteal;
     $('btn-steal-wrong').disabled    = !isSteal;
     $('btn-reveal-all').disabled     = !(isPlaying || isSteal);
@@ -1034,10 +1166,12 @@
     if (key === 'p') buzzIn(1);
 
     // Reveal answers 1-8 by keyboard number
-    if (/^[1-8]$/.test(key) && (state.phase === 'playing' || state.phase === 'steal')) {
-      const num = parseInt(key);
-      const ans = state.currentRound?.answers[num - 1];
-      if (ans) revealAnswer(ans.id);
+    if (/^[1-8]$/.test(key)) {
+      const ans = state.currentRound?.answers[parseInt(key) - 1];
+      if (ans) {
+        if (state.phase === 'faceoffAnswer') faceoffReveal(ans.id);
+        else if (state.phase === 'playing' || state.phase === 'steal') revealAnswer(ans.id);
+      }
     }
 
     // S or X = Strike, A = Reveal All, M = Mute
@@ -1057,12 +1191,16 @@
         break;
       case 'start-round':    startRound(); break;
       case 'reveal':
-        if (state.phase === 'playing' || state.phase === 'steal') {
+        if (state.phase === 'faceoffAnswer') {
+          faceoffReveal(Number(msg.ansId));
+        } else if (state.phase === 'playing' || state.phase === 'steal') {
           revealAnswer(Number(msg.ansId));
         }
         break;
       case 'strike':         addStrike(); break;
       case 'pass':           passControl(); break;
+      case 'choose-play':    chooseControl(true);  break;
+      case 'choose-pass':    chooseControl(false); break;
       case 'steal-correct':  stealCorrect(msg.ansId ? Number(msg.ansId) : null); break;
       case 'steal-wrong':    stealWrong(); break;
       case 'reveal-all':     revealAllAnswers(); break;
@@ -1097,6 +1235,8 @@
     $('btn-start-round').addEventListener('click', startRound);
     $('btn-strike').addEventListener('click', addStrike);
     $('btn-pass').addEventListener('click', passControl);
+    $('btn-choose-play').addEventListener('click', () => chooseControl(true));
+    $('btn-choose-pass').addEventListener('click', () => chooseControl(false));
     $('btn-reveal-all').addEventListener('click', revealAllAnswers);
     $('btn-steal-wrong').addEventListener('click', stealWrong);
     $('btn-next-round').addEventListener('click', advanceAfterRound);
