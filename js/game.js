@@ -30,6 +30,9 @@
     fmTimer: null,
     fmTimeLeft: 0,
     fmCurrentQ: 0,
+    fmStage: 'idle',     // idle | entry | grading | between | done
+    fmAnswers: [[], []], // per player: [{text, pts, said, graded}]
+    fmTeam: 0,           // index of the team playing fast money
     confettiAnimId: null,
     selectedPackId: 'default',
     availablePacks: [],
@@ -423,8 +426,17 @@
       prepareRound(); // lay out the next round's face-down board
       updateStatusBar(`Round ${state.round + 1} — Press START ROUND to reveal the question.`);
     } else {
+      // All rounds done — announce the winner, who advances to Fast Money
+      const leadIdx = state.teams[0].score >= state.teams[1].score ? 0 : 1;
+      state.fmTeam = leadIdx;
       setPhase('setup');
-      updateStatusBar('All rounds complete! Press START ROUND to go to Fast Money!');
+      Sounds.roundWin();
+      showOverlay(
+        `${state.teams[leadIdx].name.toUpperCase()} WINS!\nADVANCING TO FAST MONEY`,
+        3200
+      );
+      setActiveTeam(leadIdx);
+      updateStatusBar(`${state.teams[leadIdx].name} advances! Press FAST MONEY to begin.`);
       setStartRoundLabel(true);
       $('btn-start-round').dataset.fastMoney = 'true';
       broadcastState(); // let the control panel know Fast Money is next
@@ -643,28 +655,64 @@
   }
 
   // ── FAST MONEY ─────────────────────────────────────────────
+  // Show-style flow, per player:
+  //   1. ENTRY   — questions appear ONE AT A TIME with a text box; the
+  //                host types the player's answer and presses Enter to
+  //                advance. A 30-second clock runs the whole time.
+  //   2. GRADING — back through each question in order: reveal what
+  //                they said, cross-reference it against the question's
+  //                answer bank (auto-matched, host can override), and
+  //                award the points.
+  // Player 2 repeats both stages; total ≥ target wins.
+
+  function fmQuestions() {
+    return GAME_DATA.fastMoneyRounds[0].questions;
+  }
+
   function startFastMoney() {
-    // Determine winning team by score so far
-    const winnerIdx = state.teams[0].score >= state.teams[1].score ? 0 : 1;
+    const teamIdx = state.fmTeam ?? (state.teams[0].score >= state.teams[1].score ? 0 : 1);
+    state.fmTeam = teamIdx;
+    state.fmStage = 'idle';
     state.fmCurrentPlayer = 0;
     state.fmScores = [0, 0];
     state.fmCurrentQ = 0;
 
-    const fmData = GAME_DATA.fastMoneyRounds[0];
-    $('fm-team-name').textContent = state.teams[winnerIdx].name;
+    const questions = fmQuestions();
+    state.fmAnswers = [
+      questions.map(() => ({ text: '', pts: 0, said: false, graded: false })),
+      questions.map(() => ({ text: '', pts: 0, said: false, graded: false })),
+    ];
 
-    buildFMBoard(fmData.questions);
-    showScreen('fast-money-screen');
-    Sounds.surveySays();
+    const target = GAME_DATA.settings.fastMoneyTarget || 200;
+    $('fm-target-subtitle').textContent = target;
+    $('fm-target-val').textContent = target;
+    $('fm-team-name').textContent = state.teams[teamIdx].name;
+    $('fm-p1-label').textContent = `${state.teams[teamIdx].name} — Player 1`;
+    $('fm-p2-label').textContent = `${state.teams[teamIdx].name} — Player 2`;
     $('fm-p1-score').textContent = '0';
     $('fm-p2-score').textContent = '0';
     $('fm-total').textContent    = '0';
-    $('fm-p1-label').textContent = `${state.teams[winnerIdx].name} — Player 1`;
-    $('fm-p2-label').textContent     = `${state.teams[winnerIdx].name} — Player 2`;
+    $('fm-total').classList.remove('fm-win');
+    $('fm-result-banner').classList.add('hidden');
+    $('fm-timer').textContent = '—';
+    $('fm-timer').classList.remove('urgent');
+
+    buildFMBoard(questions);
+    fmShowView('idle');
     $('fm-btn-start-p1').disabled = false;
     $('fm-btn-start-p2').disabled = true;
+    $('fm-grading-box').classList.add('hidden');
 
+    showScreen('fast-money-screen');
+    Sounds.surveySays();
     setPhase('fastMoney');
+  }
+
+  // Swap the main fast-money view: 'idle' | 'entry' | 'board'
+  function fmShowView(view) {
+    $('fm-idle-view').classList.toggle('hidden',  view !== 'idle');
+    $('fm-entry-view').classList.toggle('hidden', view !== 'entry');
+    $('fm-board').classList.toggle('hidden',      view !== 'board');
   }
 
   function buildFMBoard(questions) {
@@ -676,31 +724,204 @@
       row.dataset.qIdx = i;
       row.innerHTML = `
         <div class="fm-q-num">${i + 1}</div>
-        <div class="fm-q-text">${q.question}</div>
+        <div class="fm-q-text">${escapeHtml(q.question)}</div>
         <div class="fm-answers-col">
-          <div class="fm-p-answer fm-p1-answer" id="fm-p1-q${i}">—</div>
-          <div class="fm-p-answer fm-p2-answer" id="fm-p2-q${i}">—</div>
+          <div class="fm-p-answer fm-covered" id="fm-p1-q${i}">&nbsp;</div>
+          <div class="fm-p-answer fm-covered" id="fm-p2-q${i}">&nbsp;</div>
         </div>
         <div class="fm-pts-col">
-          <div class="fm-pts" id="fm-p1-pts${i}">—</div>
-          <div class="fm-pts" id="fm-p2-pts${i}">—</div>
+          <div class="fm-pts fm-covered" id="fm-p1-pts${i}">&nbsp;</div>
+          <div class="fm-pts fm-covered" id="fm-p2-pts${i}">&nbsp;</div>
         </div>`;
       board.appendChild(row);
     });
   }
 
+  // ── ENTRY STAGE ────────────────────────────────────────────
   function startFMPlayer(playerIdx) {
     state.fmCurrentPlayer = playerIdx;
     state.fmCurrentQ = 0;
+    state.fmStage = 'entry';
+
     const timeLimit = playerIdx === 0
-      ? GAME_DATA.settings.fastMoneyTimeP1
-      : GAME_DATA.settings.fastMoneyTimeP2;
-    startFMTimer(timeLimit);
+      ? (GAME_DATA.settings.fastMoneyTimeP1 || 30)
+      : (GAME_DATA.settings.fastMoneyTimeP2 || 30);
+
     $('fm-btn-start-p1').disabled = true;
     $('fm-btn-start-p2').disabled = true;
-    $('fm-answer-form').classList.remove('hidden');
-    highlightFMQuestion(0);
-    updateStatusBar(`Player ${playerIdx + 1} — Answer quickly! Time is running!`);
+    $('fm-grading-box').classList.add('hidden');
+
+    fmShowView('entry');
+    fmShowEntryQuestion();
+    startFMTimer(timeLimit);
+    updateStatusBar(`Player ${playerIdx + 1} — type their answer, ENTER for next question!`);
+  }
+
+  function fmShowEntryQuestion() {
+    const questions = fmQuestions();
+    $('fm-entry-num').textContent = `QUESTION ${state.fmCurrentQ + 1} / ${questions.length}`;
+    $('fm-entry-question').textContent = questions[state.fmCurrentQ].question;
+    const input = $('fm-entry-input');
+    input.value = '';
+    input.focus();
+  }
+
+  function fmEntrySubmit() {
+    if (state.fmStage !== 'entry') return;
+    const p = state.fmCurrentPlayer;
+    const text = $('fm-entry-input').value.trim();
+    state.fmAnswers[p][state.fmCurrentQ].text = text; // empty = pass
+    Sounds.tick();
+
+    state.fmCurrentQ++;
+    if (state.fmCurrentQ >= fmQuestions().length) {
+      endFMEntry(false);
+    } else {
+      fmShowEntryQuestion();
+    }
+  }
+
+  // Entry over — either all questions answered or the clock hit zero.
+  function endFMEntry(timedOut) {
+    clearFMTimer();
+    if (timedOut) Sounds.timeUp();
+    state.fmStage = 'grading';
+    state.fmCurrentQ = 0;
+
+    fmShowView('board');
+    fmHighlightRow(0);
+    $('fm-grading-box').classList.remove('hidden');
+    $('fm-grading-qnum').textContent = 'Q1';
+    $('fm-btn-reveal-said').disabled = false;
+    $('fm-match-wrap').classList.add('hidden');
+    updateStatusBar(
+      `Time! Now reveal Player ${state.fmCurrentPlayer + 1}'s answers one by one and award points.`
+    );
+  }
+
+  function fmHighlightRow(idx) {
+    $all('.fm-row').forEach((r, i) => r.classList.toggle('fm-active', i === idx));
+  }
+
+  // ── GRADING STAGE ──────────────────────────────────────────
+  // Normalise for matching: lowercase, strip punctuation, squash spaces.
+  function fmNorm(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Find the best answer-bank match for what the player said.
+  // Returns bank index or -1 for no match.
+  function fmMatchBank(qIdx, saidText) {
+    const said = fmNorm(saidText);
+    if (!said) return -1;
+    const bank = fmQuestions()[qIdx].answers.map((a) => fmNorm(a.text));
+
+    let i = bank.findIndex((b) => b === said);
+    if (i >= 0) return i;
+    i = bank.findIndex((b) => b.includes(said) || said.includes(b));
+    if (i >= 0) return i;
+    // Token overlap (any shared word longer than 2 chars)
+    const saidTokens = new Set(said.split(' ').filter((w) => w.length > 2));
+    i = bank.findIndex((b) => b.split(' ').some((w) => w.length > 2 && saidTokens.has(w)));
+    return i;
+  }
+
+  // Step 1 — reveal what the player said on the board.
+  function fmRevealSaid() {
+    if (state.fmStage !== 'grading') return;
+    const p = state.fmCurrentPlayer;
+    const q = state.fmCurrentQ;
+    const rec = state.fmAnswers[p][q];
+    if (rec.said) return;
+    rec.said = true;
+
+    const cell = $(`fm-p${p + 1}-q${q}`);
+    cell.textContent = rec.text || '(no answer)';
+    cell.classList.remove('fm-covered');
+    cell.classList.add('fm-said-reveal');
+    Sounds.reveal();
+
+    // Build the answer-bank selector with the auto-match preselected
+    const bank = fmQuestions()[q].answers;
+    const match = fmMatchBank(q, rec.text);
+    const sel = $('fm-bank-select');
+    sel.innerHTML = '';
+    bank.forEach((a, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${a.text} — ${a.points} pts`;
+      sel.appendChild(opt);
+    });
+    const none = document.createElement('option');
+    none.value = -1;
+    none.textContent = 'No match — 0 pts';
+    sel.appendChild(none);
+    sel.value = String(match);
+
+    $('fm-match-hint').textContent = match >= 0
+      ? `Auto-matched: "${bank[match].text}" (${bank[match].points} pts) — change if wrong:`
+      : 'No bank match found — pick one or award 0:';
+    $('fm-match-wrap').classList.remove('hidden');
+    $('fm-btn-reveal-said').disabled = true;
+  }
+
+  // Step 2 — award the selected bank answer's points.
+  function fmAwardPoints() {
+    if (state.fmStage !== 'grading') return;
+    const p = state.fmCurrentPlayer;
+    const q = state.fmCurrentQ;
+    const rec = state.fmAnswers[p][q];
+    if (!rec.said || rec.graded) return;
+
+    const bank = fmQuestions()[q].answers;
+    const idx = parseInt($('fm-bank-select').value);
+    const pts = idx >= 0 && bank[idx] ? bank[idx].points : 0;
+
+    rec.pts = pts;
+    rec.graded = true;
+    state.fmScores[p] += pts;
+
+    const ptsEl = $(`fm-p${p + 1}-pts${q}`);
+    ptsEl.textContent = pts > 0 ? pts : 'X';
+    ptsEl.classList.remove('fm-covered');
+    ptsEl.classList.toggle('pts-zero', pts === 0);
+
+    if (pts > 0) Sounds.correct();
+    else         Sounds.wrong();
+
+    $(`fm-p${p + 1}-score`).textContent = state.fmScores[p];
+    $('fm-total').textContent = state.fmScores[0] + state.fmScores[1];
+
+    // Advance to the next question, or wrap up this player's grading
+    state.fmCurrentQ++;
+    if (state.fmCurrentQ >= fmQuestions().length) {
+      endFMGrading();
+    } else {
+      fmHighlightRow(state.fmCurrentQ);
+      $('fm-grading-qnum').textContent = `Q${state.fmCurrentQ + 1}`;
+      $('fm-btn-reveal-said').disabled = false;
+      $('fm-match-wrap').classList.add('hidden');
+    }
+  }
+
+  function endFMGrading() {
+    fmHighlightRow(-1);
+    $('fm-grading-box').classList.add('hidden');
+
+    if (state.fmCurrentPlayer === 0) {
+      state.fmStage = 'between';
+      $('fm-btn-start-p2').disabled = false;
+      updateStatusBar(
+        `Player 1 scored ${state.fmScores[0]}! Bring in Player 2 and press PLAYER 2 START.`
+      );
+    } else {
+      state.fmStage = 'done';
+      finishFastMoney();
+    }
   }
 
   function startFMTimer(seconds) {
@@ -719,8 +940,7 @@
       }
       if (state.fmTimeLeft <= 0) {
         clearFMTimer();
-        Sounds.timeUp();
-        endFMPlayer();
+        endFMEntry(true); // time's up mid-entry
       }
     }, 1000);
   }
@@ -730,68 +950,22 @@
     state.fmTimer = null;
   }
 
-  function fmMarkAnswer(pts) {
-    const p = state.fmCurrentPlayer;
-    const q = state.fmCurrentQ;
-    const ansInput = $('fm-ans-input');
-    const ansText  = ansInput.value.trim() || '—';
-    ansInput.value = '';
-
-    const prefix = p === 0 ? 'p1' : 'p2';
-    $(`fm-${prefix}-q${q}`).textContent = ansText;
-    const ptsEl = $(`fm-${prefix === 'p1' ? 'p1' : 'p2'}-pts${q}`);
-    ptsEl.textContent = pts > 0 ? pts : '✕';
-    ptsEl.classList.toggle('pts-zero', pts === 0);
-
-    state.fmScores[p] += pts;
-    if (pts > 0) Sounds.correct();
-    else         Sounds.wrong();
-
-    $(`fm-p${p + 1}-score`).textContent = state.fmScores[p];
-    $('fm-total').textContent = state.fmScores[0] + state.fmScores[1];
-
-    // Advance question or end player
-    state.fmCurrentQ++;
-    if (state.fmCurrentQ >= GAME_DATA.fastMoneyRounds[0].questions.length) {
-      clearFMTimer();
-      endFMPlayer();
-    } else {
-      highlightFMQuestion(state.fmCurrentQ);
-    }
-  }
-
-  function highlightFMQuestion(idx) {
-    $all('.fm-row').forEach((r, i) => r.classList.toggle('fm-active', i === idx));
-  }
-
-  function endFMPlayer() {
-    clearFMTimer();
-    $('fm-answer-form').classList.add('hidden');
-    highlightFMQuestion(-1);
-
-    if (state.fmCurrentPlayer === 0) {
-      $('fm-btn-start-p2').disabled = false;
-      updateStatusBar('Player 1 done! Cover board, then start Player 2.');
-    } else {
-      finishFastMoney();
-    }
-  }
-
   function finishFastMoney() {
-    const total = state.fmScores[0] + state.fmScores[1];
-    const won   = total >= GAME_DATA.settings.fastMoneyTarget;
+    const total  = state.fmScores[0] + state.fmScores[1];
+    const target = GAME_DATA.settings.fastMoneyTarget || 200;
+    const won    = total >= target;
     clearFMTimer();
 
     $('fm-total').classList.toggle('fm-win', won);
     $('fm-result-text').textContent = won
-      ? `🎉 ${total} POINTS — YOU WIN THE GRAND PRIZE!`
-      : `${total} points — Keep playing to improve!`;
+      ? `${total} POINTS — ${state.teams[state.fmTeam].name.toUpperCase()} WINS THE GRAND PRIZE!`
+      : `${total} points — so close! ${target} needed.`;
     $('fm-result-banner').classList.remove('hidden');
 
     if (won) Sounds.gameOver();
     else     Sounds.roundWin();
 
-    setTimeout(() => showEndScreen(), 3000);
+    setTimeout(() => showEndScreen(), 3500);
   }
 
   // ── GAME END ───────────────────────────────────────────────
@@ -952,22 +1126,16 @@
     // Fast Money
     $('fm-btn-start-p1').addEventListener('click', () => startFMPlayer(0));
     $('fm-btn-start-p2').addEventListener('click', () => startFMPlayer(1));
-    $('fm-btn-correct').addEventListener('click', () => {
-      const pts = parseInt($('fm-pts-input').value) || 0;
-      fmMarkAnswer(pts);
-    });
-    $('fm-btn-wrong').addEventListener('click', () => fmMarkAnswer(0));
-    $('fm-pts-input').addEventListener('keydown', (e) => {
+    $('fm-entry-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        const pts = parseInt($('fm-pts-input').value) || 0;
-        fmMarkAnswer(pts);
+        e.preventDefault();
+        fmEntrySubmit();
       }
     });
-    $('fm-btn-skip').addEventListener('click', () => {
-      $('fm-ans-input').value = 'PASS';
-      fmMarkAnswer(0);
-    });
+    $('fm-btn-reveal-said').addEventListener('click', fmRevealSaid);
+    $('fm-btn-award').addEventListener('click', fmAwardPoints);
     $('fm-btn-end-fm').addEventListener('click', () => {
+      if (!confirm('Finish Fast Money now with the current total?')) return;
       clearFMTimer();
       finishFastMoney();
     });

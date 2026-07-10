@@ -15,8 +15,8 @@ var DEFAULT_SETTINGS = {
   totalRounds: 4,
   roundMultipliers: [1, 2, 3, 4],
   fastMoneyTarget: 200,
-  fastMoneyTimeP1: 20,
-  fastMoneyTimeP2: 25,
+  fastMoneyTimeP1: 30,
+  fastMoneyTimeP2: 30,
 };
 
 var GAME_PACK_SEEDS = [
@@ -244,6 +244,115 @@ var GAME_PACK_SEEDS = [
     settings: { ...DEFAULT_SETTINGS },
     rounds: [],
     fastMoneyRounds: [{ questions: [] }],
+  },
+
+  // ── EY TECH ───────────────────────────────────────────────
+  {
+    id: 'ey-tech',
+    name: 'EY TECH',
+    icon: '💼',
+    builtIn: false,
+    settings: { ...DEFAULT_SETTINGS },
+    rounds: [
+      {
+        id: 1,
+        question: "We asked members of the EY tech team, what's a word or phrase you expect to hear in a morning stand up?",
+        answers: [
+          { id: 1, text: 'Good morning team :)',                 points: 28 },
+          { id: 2, text: 'Stay Hydrated',                        points: 22 },
+          { id: 3, text: "I'm a 10 today!",                      points: 18 },
+          { id: 4, text: 'I plan on getting some learning done', points: 14 },
+          { id: 5, text: "That's it for me!",                    points: 10 },
+          { id: 6, text: 'Have a good one.',                     points: 8  },
+        ],
+      },
+      {
+        id: 2,
+        question: "We asked 100 employees, what's the most common corporate jargon?",
+        answers: [
+          { id: 1, text: "Let's circle back…",  points: 32 },
+          { id: 2, text: 'So we can align…',    points: 26 },
+          { id: 3, text: 'Any bandwidth?',      points: 20 },
+          { id: 4, text: 'Quick chat / call',   points: 14 },
+          { id: 5, text: "Let's stick a pin",   points: 8  },
+        ],
+      },
+      {
+        id: 3,
+        question: "You created a deck and Justin/Anil reviewed it but something's off…",
+        answers: [
+          { id: 1, text: 'The font size',              points: 35 },
+          { id: 2, text: 'The colors',                 points: 28 },
+          { id: 3, text: 'The wording / phrasing',     points: 22 },
+          { id: 4, text: 'The graphics (or lack thereof)', points: 15 },
+        ],
+      },
+      {
+        id: 4,
+        question: "You're trying to reach a team member but his Teams status is unfortunately:",
+        answers: [
+          { id: 1, text: 'Out of Office', points: 42 },
+          { id: 2, text: 'Offline',       points: 33 },
+          { id: 3, text: 'On a call',     points: 25 },
+        ],
+      },
+    ],
+    fastMoneyRounds: [
+      {
+        questions: [
+          {
+            question: "You're submitting a proposal so naturally you live in this Microsoft App…",
+            answers: [
+              { text: 'PowerPoint', points: 42 },
+              { text: 'Word',       points: 26 },
+              { text: 'Excel',      points: 15 },
+              { text: 'Teams',      points: 10 },
+              { text: 'Outlook',    points: 7  },
+            ],
+          },
+          {
+            question: 'How many emails is too many emails per day?',
+            answers: [
+              { text: '50',  points: 35 },
+              { text: '100', points: 28 },
+              { text: '30',  points: 18 },
+              { text: '20',  points: 12 },
+              { text: '10',  points: 7  },
+            ],
+          },
+          {
+            question: "What's the longest you can stay on a call before you forget you're on a call?",
+            answers: [
+              { text: '1 hour',     points: 38 },
+              { text: '30 minutes', points: 26 },
+              { text: '2 hours',    points: 16 },
+              { text: '45 minutes', points: 12 },
+              { text: '15 minutes', points: 8  },
+            ],
+          },
+          {
+            question: 'You just got an EY mass email, who sent it?',
+            answers: [
+              { text: 'Talent / HR',            points: 34 },
+              { text: 'IT / Service Desk',      points: 26 },
+              { text: 'Leadership / Partners',  points: 18 },
+              { text: 'Learning & Development', points: 14 },
+              { text: 'Wellness Team',          points: 8  },
+            ],
+          },
+          {
+            question: 'A team member just used an EY acronym, which one was it?',
+            answers: [
+              { text: 'OOO', points: 32 },
+              { text: 'EOD', points: 24 },
+              { text: 'SOW', points: 20 },
+              { text: 'GDS', points: 14 },
+              { text: 'POC', points: 10 },
+            ],
+          },
+        ],
+      },
+    ],
   },
 ];
 

@@ -242,15 +242,33 @@
 
     <div class="fm-header">
       <div class="fm-title">FAST MONEY!</div>
-      <div class="fm-subtitle">Score 200+ Points to Win the Grand Prize!</div>
+      <div class="fm-subtitle">Score <span id="fm-target-subtitle">200</span>+ Points to Win the Grand Prize!</div>
       <div class="fm-team-label">Playing: <span id="fm-team-name">Team</span></div>
     </div>
 
     <div class="fm-body">
 
-      <!-- Questions Board -->
-      <div id="fm-board">
-        <!-- .fm-row elements injected by JS -->
+      <div class="fm-main">
+        <!-- ENTRY VIEW — one question at a time while the clock runs -->
+        <div id="fm-entry-view" class="hidden">
+          <div class="fm-entry-num" id="fm-entry-num">QUESTION 1 / 5</div>
+          <div class="fm-entry-question" id="fm-entry-question">—</div>
+          <div class="fm-entry-input-wrap">
+            <input type="text" id="fm-entry-input" placeholder="Type their answer, press ENTER…" autocomplete="off">
+          </div>
+          <div class="fm-entry-hint">ENTER saves the answer and shows the next question · leave blank to pass</div>
+        </div>
+
+        <!-- REVEAL BOARD — all questions with covered answers, revealed one by one -->
+        <div id="fm-board" class="hidden">
+          <!-- .fm-row elements injected by JS -->
+        </div>
+
+        <!-- Idle prompt before player 1 starts -->
+        <div id="fm-idle-view">
+          <div class="fm-idle-text">Get Player 1 ready, then press <b>PLAYER 1 START</b>.<br>
+          Player 2 should be out of earshot!</div>
+        </div>
       </div>
 
       <!-- Sidebar -->
@@ -277,34 +295,28 @@
             <span class="fm-total-label">TOTAL</span>
             <div style="display:flex;align-items:baseline;gap:4px;">
               <span id="fm-total">0</span>
-              <span class="fm-target">/ 200</span>
+              <span class="fm-target">/ <span id="fm-target-val">200</span></span>
             </div>
           </div>
         </div>
 
-        <!-- Player Controls -->
+        <!-- Host Controls -->
         <div class="fm-controls-box">
           <button class="ctrl-btn btn-green" id="fm-btn-start-p1"><i class="ico" data-icon="play"></i><span>PLAYER 1 START</span></button>
           <button class="ctrl-btn btn-blue"  id="fm-btn-start-p2" disabled><i class="ico" data-icon="play"></i><span>PLAYER 2 START</span></button>
 
-          <!-- Answer entry (shown during play) -->
-          <div class="fm-answer-form hidden" id="fm-answer-form">
-            <div style="font-size:11px;letter-spacing:.15em;color:#8899cc;text-align:center;">PLAYER'S ANSWER</div>
-            <div class="fm-answer-row">
-              <input type="text" id="fm-ans-input" placeholder="What they said…" autocomplete="off">
+          <!-- Grading controls (shown while revealing answers) -->
+          <div class="fm-grading-box hidden" id="fm-grading-box">
+            <div class="fm-grading-label">REVEALING <span id="fm-grading-qnum">Q1</span></div>
+            <button class="ctrl-btn btn-yellow" id="fm-btn-reveal-said" style="width:100%;"><i class="ico" data-icon="grid"></i><span>REVEAL ANSWER</span></button>
+            <div class="fm-match-wrap hidden" id="fm-match-wrap">
+              <div class="fm-match-hint" id="fm-match-hint">Match against the answer bank:</div>
+              <select id="fm-bank-select"></select>
+              <button class="ctrl-btn btn-green" id="fm-btn-award" style="width:100%;"><i class="ico" data-icon="check"></i><span>AWARD POINTS</span></button>
             </div>
-            <div style="font-size:11px;letter-spacing:.15em;color:#8899cc;text-align:center;">POINTS SCORED</div>
-            <div class="fm-answer-row">
-              <input type="number" id="fm-pts-input" placeholder="0" min="0" max="100">
-            </div>
-            <div class="fm-grade-row">
-              <button class="ctrl-btn btn-green" id="fm-btn-correct" style="flex:1;"><i class="ico" data-icon="check"></i><span>CORRECT</span></button>
-              <button class="ctrl-btn btn-red"   id="fm-btn-wrong"   style="flex:1;"><i class="ico" data-icon="strike"></i><span>WRONG</span></button>
-            </div>
-            <button class="ctrl-btn btn-blue" id="fm-btn-skip" style="width:100%;">PASS / SKIP</button>
           </div>
 
-          <button class="ctrl-btn btn-orange" id="fm-btn-end-fm" style="width:100%;">FINISH FAST MONEY</button>
+          <button class="ctrl-btn btn-orange" id="fm-btn-end-fm" style="width:100%;"><i class="ico" data-icon="stop"></i><span>FINISH FAST MONEY</span></button>
         </div>
 
       </div>
