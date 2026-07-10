@@ -66,7 +66,7 @@
       <button class="btn-primary" id="btn-start-game">START GAME</button>
 
       <div style="font-size:12px;letter-spacing:.12em;color:#4a5a88;text-align:center;margin-top:8px;">
-        Keyboard shortcuts: Q = Team 1 Buzz &nbsp;|&nbsp; P = Team 2 Buzz &nbsp;|&nbsp; 1–8 = Reveal Answer &nbsp;|&nbsp; S = Strike &nbsp;|&nbsp; A = Reveal All &nbsp;|&nbsp; M = Mute
+        Keyboard shortcuts: Q = Team 1 Buzz &nbsp;|&nbsp; P = Team 2 Buzz &nbsp;|&nbsp; 1–8 = Reveal Answer &nbsp;|&nbsp; S / X = Strike &nbsp;|&nbsp; A = Reveal All &nbsp;|&nbsp; M = Mute
       </div>
     </div>
   </div>
@@ -82,11 +82,23 @@
     </div>
 
     <div class="codes-card">
+      <button class="btn-back" id="btn-back-intro" title="Back to team setup">← BACK</button>
       <div class="codes-title">GAME CREATED!</div>
 
       <div class="game-code-box">
         <div class="codes-label">GAME CODE</div>
         <div class="game-code-value" id="display-game-code">——————</div>
+      </div>
+
+      <!-- Host control link — open on another device to run the board remotely -->
+      <div class="host-link-group" id="host-link-group">
+        <div class="player-link-header">
+          <span class="player-link-team-badge host-badge">🎛 HOST CONTROL</span>
+          <span class="player-link-status">Run the board from another device</span>
+        </div>
+        <div class="player-link-label" id="host-link-display">—</div>
+        <button class="btn-copy-link" data-copy="host">⎘ Copy Host Link</button>
+        <p class="host-link-hint">Open this on a laptop, tablet or phone — it shows all the answers and every host button (reveal, strike, pass, steal). Keep it secret from players!</p>
       </div>
 
       <div class="player-links">
@@ -125,9 +137,12 @@
 
     <!-- ── Header ── -->
     <header id="game-header">
-      <div class="round-badge">
-        <span class="round-label">ROUND</span>
-        <span class="round-number" id="round-number">1</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button id="btn-exit-game" class="header-link" title="Leave game and return home" style="transform:none;">←</button>
+        <div class="round-badge">
+          <span class="round-label">ROUND</span>
+          <span class="round-number" id="round-number">1</span>
+        </div>
       </div>
 
       <div class="logo-mini">FAMILY FEUD</div>
@@ -198,16 +213,6 @@
 
     </main>
 
-    <!-- ── Host Answer Cheat Sheet ── -->
-    <div id="cheatsheet" class="hidden">
-      <div class="cs-head">
-        <span class="cs-title">★ HOST ANSWER SHEET</span>
-        <button class="cs-toggle" id="cs-toggle" title="Hide / show">▾</button>
-      </div>
-      <div class="cs-hint">Tap an answer to reveal it on the board.</div>
-      <div id="cheatsheet-list" class="cs-list"></div>
-    </div>
-
     <!-- ── Status Bar ── -->
     <div id="status-bar">
       <span id="status-message">Click START GAME to play!</span>
@@ -224,6 +229,7 @@
         <button class="ctrl-btn btn-red"    id="btn-steal-wrong"  title="Steal answer was WRONG" disabled>★ STEAL ✕</button>
         <button class="ctrl-btn btn-purple" id="btn-reveal-all"   title="Reveal all remaining answers (A)" disabled>⊞ REVEAL ALL</button>
         <button class="ctrl-btn btn-orange" id="btn-next-round"   title="Advance to next round" disabled>→ NEXT ROUND</button>
+        <button class="ctrl-btn btn-red"    id="btn-end-game"     title="End the game now — highest score wins" disabled>⏹ END GAME</button>
       </div>
     </div>
 

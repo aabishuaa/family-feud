@@ -41,11 +41,36 @@
     document.body.dataset.phase = phase;
     updateControlButtons();
     updateStatusBar();
-    // Broadcast to connected player phones
+    broadcastState();
+  }
+
+  // Push full game state to the server. Player phones receive only the
+  // phase/buzzer fields (server strips `sync`); remote host-control
+  // panels receive everything, including answers, so the host can
+  // reveal from another device.
+  function broadcastState() {
     Multiplayer.broadcast({
-      phase,
-      buzzerActive: phase === 'faceoff',
+      phase: state.phase,
+      buzzerActive: state.phase === 'faceoff',
       teamNames: [state.teams[0].name, state.teams[1].name],
+      sync: {
+        round:       state.round,
+        totalRounds: GAME_DATA?.settings?.totalRounds ?? 4,
+        multiplier:  state.multiplier,
+        question:    state.currentRound?.question || '',
+        answers: (state.currentRound?.answers || []).map((a) => ({
+          id: a.id,
+          text: a.text,
+          points: a.points * state.multiplier,
+          revealed: state.revealedAnswers.has(a.id),
+        })),
+        strikes:     state.strikes,
+        maxStrikes:  GAME_DATA?.settings?.maxStrikes ?? 3,
+        roundPoints: state.roundPoints,
+        scores:      [state.teams[0].score, state.teams[1].score],
+        activeTeam:  state.activeTeam,
+        fastMoneyNext: $('btn-start-round')?.dataset.fastMoney === 'true',
+      },
     });
   }
 
@@ -111,11 +136,14 @@
     $('display-game-code').textContent = room.gameCode;
     $('team1-link-display').textContent = room.team1Url;
     $('team2-link-display').textContent = room.team2Url;
+    $('host-link-display').textContent  = room.hostUrl;
 
     // Copy buttons
     document.querySelectorAll('.btn-copy-link').forEach((btn) => {
       btn.onclick = () => {
-        const url = btn.dataset.copy === 'team1' ? room.team1Url : room.team2Url;
+        const url = btn.dataset.copy === 'team1' ? room.team1Url
+                  : btn.dataset.copy === 'team2' ? room.team2Url
+                  : room.hostUrl;
         navigator.clipboard.writeText(url).then(() => {
           const orig = btn.textContent;
           btn.textContent = '✓ Copied!';
@@ -126,6 +154,7 @@
 
     showScreen('codes-screen');
     Multiplayer.connect();
+    setPhase('lobby');
   }
 
   function _proceedToGame() {
@@ -166,10 +195,10 @@
     $('question-text').classList.remove('hidden');
 
     buildBoard(state.currentRound.answers);
-    buildCheatSheet(state.currentRound);
     resetStrikes();
     clearActiveTeam();
     updateTeamDisplays();
+    broadcastState(); // control panel sees the new question immediately
 
     if (state.multiplier > 1) {
       $('multiplier-badge').textContent = `×${state.multiplier}`;
@@ -229,12 +258,12 @@
 
     state.revealedAnswers.add(ansId);
     tile.classList.add('revealed');
-    updateCheatSheetState();
 
     const ans = state.currentRound.answers.find((a) => a.id === ansId);
     const pts = ans.points * state.multiplier;
     state.roundPoints += pts;
     animatePointsCounter($('running-points'), state.roundPoints);
+    broadcastState();
 
     // #1 answer special sound
     if (state.currentRound.answers[0].id === ansId) {
@@ -272,7 +301,7 @@
             tile.classList.add('revealed', 'dimmed');
             state.roundPoints += ans.points * state.multiplier;
             state.revealedAnswers.add(ans.id);
-            updateCheatSheetState();
+            broadcastState();
           }
         }, i * 300);
       }
@@ -292,6 +321,7 @@
     renderStrikes();
     Sounds.wrong();
     flashStrike(state.strikes - 1);
+    broadcastState();
 
     if (state.strikes >= GAME_DATA.settings.maxStrikes) {
       // Offer steal to other team
@@ -333,6 +363,7 @@
     state.activeTeam = 1 - state.activeTeam;
     setActiveTeam(state.activeTeam);
     updateStatusBar(`${state.teams[state.activeTeam].name} is now playing!`);
+    broadcastState();
   }
 
   // ── END ROUND ──────────────────────────────────────────────
@@ -346,6 +377,7 @@
       $(`${prefix}-name-display`).textContent = state.teams[i].name;
     });
     animateScoreAdd(winnerTeamIdx, prevScore, pts);
+    broadcastState(); // push updated scores to the control panel
 
     Sounds.roundWin();
     showOverlay(
@@ -353,20 +385,24 @@
       2500
     );
 
-    setTimeout(() => {
-      if (state.phase !== 'roundEnd') return; // guard against double-transition
-      state.round++;
-      $('round-number').textContent = state.round + 1;
-      if (state.round < GAME_DATA.settings.totalRounds) {
-        setPhase('setup');
-        updateStatusBar(`Round ${state.round + 1} — Press START ROUND to continue.`);
-      } else {
-        setPhase('setup');
-        updateStatusBar('All rounds complete! Press START ROUND to go to Fast Money!');
-        $('btn-start-round').textContent = '★ FAST MONEY!';
-        $('btn-start-round').dataset.fastMoney = 'true';
-      }
-    }, 2800);
+    setTimeout(advanceAfterRound, 2800);
+  }
+
+  // Move from roundEnd → setup for the next round (or arm Fast Money).
+  function advanceAfterRound() {
+    if (state.phase !== 'roundEnd') return; // guard against double-transition
+    state.round++;
+    $('round-number').textContent = state.round + 1;
+    if (state.round < GAME_DATA.settings.totalRounds) {
+      setPhase('setup');
+      updateStatusBar(`Round ${state.round + 1} — Press START ROUND to continue.`);
+    } else {
+      setPhase('setup');
+      updateStatusBar('All rounds complete! Press START ROUND to go to Fast Money!');
+      $('btn-start-round').textContent = '★ FAST MONEY!';
+      $('btn-start-round').dataset.fastMoney = 'true';
+      broadcastState(); // let the control panel know Fast Money is next
+    }
   }
 
   // ── STRIKES ────────────────────────────────────────────────
@@ -425,6 +461,7 @@
   // ── STATUS BAR ─────────────────────────────────────────────
   const statusMessages = {
     intro:     '',
+    lobby:     'Waiting for players to join…',
     setup:     'Press START ROUND to begin!',
     faceoff:   'Both teams ready — click BUZZ to ring in!',
     playing:   'Click a tile to reveal an answer, or hit STRIKE for a wrong answer.',
@@ -453,6 +490,7 @@
     $('btn-steal-wrong').disabled    = !isSteal;
     $('btn-reveal-all').disabled     = !(isPlaying || isSteal);
     $('btn-next-round').disabled     = p !== 'roundEnd';
+    $('btn-end-game').disabled       = ['intro', 'lobby', 'gameEnd'].includes(p);
 
     $('team1-buzz-btn').disabled   = !isFaceoff;
     $('team2-buzz-btn').disabled   = !isFaceoff;
@@ -580,7 +618,6 @@
 
   // ── FAST MONEY ─────────────────────────────────────────────
   function startFastMoney() {
-    clearCheatSheet();
     // Determine winning team by score so far
     const winnerIdx = state.teams[0].score >= state.teams[1].score ? 0 : 1;
     state.fmCurrentPlayer = 0;
@@ -750,18 +787,34 @@
     setPhase('gameEnd');
   }
 
-  function playAgain() {
+  // End the game right now: whoever is ahead wins (skips Fast Money).
+  function endGameNow() {
+    clearFMTimer();
+    $('btn-start-round').textContent = '▶ START ROUND';
+    $('btn-start-round').dataset.fastMoney = '';
+    showEndScreen();
+  }
+
+  // Abandon the game and return to the home screen.
+  function resetToIntro() {
+    clearFMTimer();
+    cancelAnimationFrame(state.confettiAnimId);
     state.teams[0].score = 0;
     state.teams[1].score = 0;
+    state.round = 0;
+    $('btn-start-round').textContent = '▶ START ROUND';
+    $('btn-start-round').dataset.fastMoney = '';
     $('end-team1-box').classList.remove('winner-box');
     $('end-team2-box').classList.remove('winner-box');
-    cancelAnimationFrame(state.confettiAnimId);
-    const cc = $('confetti-canvas');
-    if (cc) cc.getContext('2d').clearRect(0, 0, cc.width, cc.height);
-    clearCheatSheet();
     showScreen('intro-screen');
     setPhase('intro');
     loadGameModes();
+  }
+
+  function playAgain() {
+    const cc = $('confetti-canvas');
+    if (cc) cc.getContext('2d').clearRect(0, 0, cc.width, cc.height);
+    resetToIntro();
   }
 
   // ── MUTE TOGGLE ────────────────────────────────────────────
@@ -786,11 +839,39 @@
       if (ans) revealAnswer(ans.id);
     }
 
-    // S = Strike, A = Reveal All, N = Next/Start Round, M = Mute
-    if (key === 's') addStrike();
+    // S or X = Strike, A = Reveal All, M = Mute
+    if (key === 's' || key === 'x') addStrike();
     if (key === 'a') revealAllAnswers();
     if (key === 'm') toggleMute();
   });
+
+  // ── REMOTE HOST CONTROL ────────────────────────────────────
+  // Actions arriving from the host-control panel (host.html) opened
+  // on another device. Each maps to the same functions the on-board
+  // buttons use, so all phase guards still apply.
+  function handleControlAction(msg) {
+    switch (msg.action) {
+      case 'proceed':        // begin game from the lobby screen
+        if (state.phase === 'lobby') _proceedToGame();
+        break;
+      case 'start-round':    startRound(); break;
+      case 'reveal':
+        if (state.phase === 'playing' || state.phase === 'steal') {
+          revealAnswer(Number(msg.ansId));
+        }
+        break;
+      case 'strike':         addStrike(); break;
+      case 'pass':           passControl(); break;
+      case 'steal-correct':  stealCorrect(msg.ansId ? Number(msg.ansId) : null); break;
+      case 'steal-wrong':    stealWrong(); break;
+      case 'reveal-all':     revealAllAnswers(); break;
+      case 'next-round':     advanceAfterRound(); break;
+      case 'buzz':           buzzIn(Number(msg.team)); break;
+      case 'end-game':
+        if (!['intro', 'lobby', 'gameEnd'].includes(state.phase)) endGameNow();
+        break;
+    }
+  }
 
   // ── EVENT WIRING ───────────────────────────────────────────
   function init() {
@@ -802,6 +883,10 @@
     // Codes screen
     $('btn-proceed-game').addEventListener('click', _proceedToGame);
     $('btn-skip-mp').addEventListener('click', _proceedToGame);
+    $('btn-back-intro').addEventListener('click', () => {
+      showScreen('intro-screen');
+      setPhase('intro');
+    });
 
     // Game controls
     $('btn-start-round').addEventListener('click', startRound);
@@ -809,21 +894,19 @@
     $('btn-pass').addEventListener('click', passControl);
     $('btn-reveal-all').addEventListener('click', revealAllAnswers);
     $('btn-steal-wrong').addEventListener('click', stealWrong);
-    $('btn-next-round').addEventListener('click', () => {
-      if (state.phase !== 'roundEnd') return;
-      state.round++;
-      $('round-number').textContent = state.round + 1;
-      if (state.round < GAME_DATA.settings.totalRounds) {
-        setPhase('setup');
-        updateStatusBar(`Round ${state.round + 1} — Press START ROUND.`);
-      } else {
-        setPhase('setup');
-        updateStatusBar('All rounds complete! Press START ROUND to go to Fast Money!');
-        $('btn-start-round').textContent = '★ FAST MONEY!';
-        $('btn-start-round').dataset.fastMoney = 'true';
-      }
+    $('btn-next-round').addEventListener('click', advanceAfterRound);
+    $('btn-end-game').addEventListener('click', () => {
+      if (confirm('End the game now? The team with the highest score wins.')) endGameNow();
+    });
+    $('btn-exit-game').addEventListener('click', () => {
+      if (confirm('Leave this game and return to the home screen? Scores will be lost.')) resetToIntro();
     });
     $('btn-mute').addEventListener('click', toggleMute);
+
+    // Remote host-control panel
+    Multiplayer.setOnControlAction(handleControlAction);
+    Multiplayer.setOnControlJoined(() => broadcastState());
+    Multiplayer.setOnConnected(() => broadcastState());
 
     // Team buzz buttons
     $('team1-buzz-btn').addEventListener('click', () => buzzIn(0));
@@ -860,15 +943,6 @@
 
     // End screen
     $('btn-play-again').addEventListener('click', playAgain);
-
-    // Cheat-sheet collapse toggle
-    const csToggle = $('cs-toggle');
-    if (csToggle) {
-      csToggle.addEventListener('click', () => {
-        $('cheatsheet').classList.toggle('collapsed');
-        csToggle.textContent = $('cheatsheet').classList.contains('collapsed') ? '▴' : '▾';
-      });
-    }
 
     // Start in intro phase
     setPhase('intro');
@@ -960,47 +1034,6 @@
     return String(s ?? '').replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
     }[c]));
-  }
-
-  // ── HOST CHEAT SHEET ───────────────────────────────────────
-  // Floating panel on the host's screen showing all answers with reveal buttons.
-  function buildCheatSheet(round) {
-    const list = $('cheatsheet-list');
-    if (!list) return;
-    list.innerHTML = '';
-    round.answers.forEach((ans, i) => {
-      const row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'cs-row';
-      row.dataset.ansId = ans.id;
-      row.innerHTML = `
-        <span class="cs-rank">${i + 1}</span>
-        <span class="cs-text">${escapeHtml(ans.text)}</span>
-        <span class="cs-pts">${ans.points * state.multiplier}</span>
-      `;
-      row.addEventListener('click', () => {
-        if (state.phase === 'playing' || state.phase === 'steal') {
-          revealAnswer(ans.id);
-        }
-      });
-      list.appendChild(row);
-    });
-    $('cheatsheet').classList.remove('hidden');
-    updateCheatSheetState();
-  }
-
-  function updateCheatSheetState() {
-    const list = $('cheatsheet-list');
-    if (!list) return;
-    list.querySelectorAll('.cs-row').forEach((row) => {
-      const id = Number(row.dataset.ansId);
-      row.classList.toggle('revealed', state.revealedAnswers.has(id));
-    });
-  }
-
-  function clearCheatSheet() {
-    const cs = $('cheatsheet');
-    if (cs) cs.classList.add('hidden');
   }
 
   // Boot
