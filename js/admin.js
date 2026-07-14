@@ -16,6 +16,7 @@
   let dirty = false;       // unsaved changes?
 
   let roundQuery = ''; // current rounds search filter (lower-cased)
+  const expandedRounds = new Set(); // round ids currently expanded in the editor
 
   // ── Boot ─────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
@@ -113,7 +114,7 @@
       if (!seed) { toast('Failed to load pack: ' + err.message, true); return; }
       currentPack = JSON.parse(JSON.stringify(seed));
     }
-    dirty = false;
+    clearDirty();
     renderPackList();
     renderEditor();
   }
@@ -124,8 +125,9 @@
     $('editor-content').classList.remove('hidden');
     const p = currentPack;
 
-    // Reset the rounds search when opening a different pack
+    // Reset the rounds search + collapse state when opening a different pack
     roundQuery = '';
+    expandedRounds.clear();
     if ($('rounds-search')) $('rounds-search').value = '';
     if ($('rounds-search-clear')) $('rounds-search-clear').classList.add('hidden');
 
@@ -200,15 +202,22 @@
   function buildRoundCard(round, idx) {
     const card = document.createElement('div');
     card.className = 'round-card';
+    // Expanded if the user opened it, or while a search is active (show matches)
+    const isExpanded = expandedRounds.has(round.id) || !!roundQuery;
+    if (isExpanded) card.classList.add('expanded');
+
+    const answerCount = round.answers?.length || 0;
     card.innerHTML = `
       <div class="round-head">
         <div class="round-num">${idx + 1}</div>
         <input class="round-question" type="text" value="${escapeAttr(round.question)}"
                placeholder="We surveyed 100 people…">
+        <span class="answer-count-chip">${answerCount} answer${answerCount === 1 ? '' : 's'}</span>
         <div class="round-actions">
           <button class="icon-btn" data-act="up"     title="Move up">${Icons.svg('chevUp')}</button>
           <button class="icon-btn" data-act="down"   title="Move down">${Icons.svg('chevDown')}</button>
           <button class="icon-btn danger" data-act="delete" title="Delete round">${Icons.svg('trash')}</button>
+          <button class="icon-btn round-toggle" data-act="toggle" title="Show / hide answers">${Icons.svg('chevDown')}</button>
         </div>
       </div>
       <div class="answers-list"></div>
@@ -221,6 +230,9 @@
       markDirty();
     });
 
+    // Clicking the count chip also toggles — a natural "show me the answers" target
+    card.querySelector('.answer-count-chip').addEventListener('click', () => toggleRound(round, card));
+
     // Answers
     const list = card.querySelector('.answers-list');
     round.answers.forEach((ans, ai) => list.appendChild(buildAnswerRow(round, ans, ai)));
@@ -230,16 +242,33 @@
       if (round.answers.length >= 8) { toast('Max 8 answers per round', true); return; }
       const newId = (Math.max(0, ...round.answers.map((a) => a.id)) || 0) + 1;
       round.answers.push({ id: newId, text: '', points: 0 });
-      list.appendChild(buildAnswerRow(round, round.answers[round.answers.length - 1], round.answers.length - 1));
+      const row = buildAnswerRow(round, round.answers[round.answers.length - 1], round.answers.length - 1);
+      list.appendChild(row);
+      card.querySelector('.answer-count-chip').textContent =
+        `${round.answers.length} answer${round.answers.length === 1 ? '' : 's'}`;
+      row.querySelector('.answer-text-input').focus();
       markDirty();
     });
 
     // Round actions
     card.querySelectorAll('[data-act]').forEach((btn) => {
-      btn.addEventListener('click', () => roundAction(btn.dataset.act, idx));
+      btn.addEventListener('click', () => {
+        if (btn.dataset.act === 'toggle') toggleRound(round, card);
+        else roundAction(btn.dataset.act, idx);
+      });
     });
 
     return card;
+  }
+
+  function toggleRound(round, card) {
+    if (expandedRounds.has(round.id)) {
+      expandedRounds.delete(round.id);
+      card.classList.remove('expanded');
+    } else {
+      expandedRounds.add(round.id);
+      card.classList.add('expanded');
+    }
   }
 
   function buildAnswerRow(round, ans, idx) {
@@ -404,7 +433,7 @@
         body: JSON.stringify(payload),
       });
       currentPack = data.pack;
-      dirty = false;
+      clearDirty();
       toast('Saved!');
       await refreshPackList();
       renderEditor();
@@ -424,7 +453,7 @@
         body: JSON.stringify({ name: 'New Mode', icon: '🎯' }),
       });
       currentPack = data.pack;
-      dirty = false;
+      clearDirty();
       await refreshPackList();
       renderEditor();
       activateTab('rounds');
@@ -447,7 +476,7 @@
     try {
       await api(`/api/packs/${currentPack.id}`, { method: 'DELETE' });
       currentPack = null;
-      dirty = false;
+      clearDirty();
       $('editor-content').classList.add('hidden');
       $('editor-empty').classList.remove('hidden');
       await refreshPackList();
@@ -471,7 +500,7 @@
         }),
       });
       currentPack = data.pack;
-      dirty = false;
+      clearDirty();
       await refreshPackList();
       renderEditor();
       toast('Duplicated — edit your copy below.');
@@ -481,7 +510,15 @@
   }
 
   // ── UI helpers ───────────────────────────────────────────
-  function markDirty() { dirty = true; }
+  function markDirty() {
+    dirty = true;
+    $('btn-save').classList.add('has-changes');
+  }
+
+  function clearDirty() {
+    dirty = false;
+    $('btn-save').classList.remove('has-changes');
+  }
 
   function toast(msg, isError = false) {
     const t = $('toast');
@@ -551,7 +588,7 @@
       searchInput.focus();
     });
 
-    $('btn-add-round').addEventListener('click', () => {
+    function addNewRound() {
       if (!currentPack || currentPack.builtIn) return;
       // Clear any active search so the newly-added round is visible
       if (roundQuery) {
@@ -565,16 +602,19 @@
         question: '',
         answers: [{ id: 1, text: '', points: 0 }],
       });
+      expandedRounds.add(newId); // new rounds open ready for editing
       markDirty();
       renderRounds();
       // Scroll to and focus the new round's question field
       const cards = $('rounds-container').querySelectorAll('.round-card');
       const last = cards[cards.length - 1];
       if (last) {
-        last.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        last.scrollIntoView({ behavior: 'smooth', block: 'center' });
         last.querySelector('.round-question')?.focus();
       }
-    });
+    }
+    $('btn-add-round').addEventListener('click', addNewRound);
+    $('btn-add-round-top').addEventListener('click', addNewRound);
 
     $('btn-add-fm').addEventListener('click', () => {
       if (!currentPack || currentPack.builtIn) return;

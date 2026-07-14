@@ -3,12 +3,18 @@
    Layered on top of style.css; reuses fonts and dark backdrop.
    ============================================================ */
 
+/* App-style layout: fixed header, panels scroll independently.
+   (style.css sets html/body overflow:hidden for the game — here we
+   embrace it and give each column its own scroll area instead.) */
 .admin-body {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--dark-bg, #070d1f);
   color: #fff;
   font-family: 'Oswald', sans-serif;
-  overflow-x: hidden;
+  overflow: hidden;
+  user-select: text;   /* editing UI — allow text selection */
 }
 
 .admin-body .screen { display: block; position: static; height: auto; }
@@ -16,13 +22,14 @@
 /* ── Header ────────────────────────────────────────── */
 .admin-header {
   position: relative;
-  z-index: 2;
+  z-index: 10;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 28px;
+  padding: 14px 28px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  background: linear-gradient(180deg, rgba(10,16,40,0.9), rgba(10,16,40,0.6));
+  background: linear-gradient(180deg, rgba(10,16,40,0.95), rgba(10,16,40,0.8));
   backdrop-filter: blur(8px);
 }
 .admin-brand { display: flex; align-items: center; gap: 18px; }
@@ -61,15 +68,21 @@
 .admin-main {
   position: relative;
   z-index: 2;
+  flex: 1;
+  min-height: 0;             /* allow children to shrink & scroll */
   display: grid;
   grid-template-columns: 280px 1fr;
   gap: 22px;
-  padding: 22px;
+  padding: 18px 22px 22px;
   max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
 }
 @media (max-width: 880px) {
-  .admin-main { grid-template-columns: 1fr; }
+  .admin-body  { height: auto; min-height: 100vh; overflow-y: auto; }
+  .admin-main  { grid-template-columns: 1fr; }
+  .admin-sidebar, .admin-editor { height: auto; }
+  .tab-panel.active { overflow: visible; }
 }
 
 /* ── Sidebar / pack list ───────────────────────────── */
@@ -78,9 +91,11 @@
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   padding: 16px;
-  height: fit-content;
-  position: sticky;
-  top: 16px;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .admin-section-title {
   font-size: 11px;
@@ -93,8 +108,10 @@
   flex-direction: column;
   gap: 6px;
   margin-bottom: 14px;
-  max-height: 60vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
 .pack-list-empty {
   color: #4a5a88;
@@ -145,10 +162,25 @@
   background: rgba(13,23,48,0.6);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
-  padding: 22px;
-  min-height: 70vh;
+  padding: 18px 22px;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
+/* Head, banner and tabs stay pinned; only the tab content scrolls */
+.editor-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.editor-content.hidden { display: none; }
+.editor-head, .readonly-banner, .editor-tabs { flex-shrink: 0; }
+
 .editor-empty {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -240,8 +272,27 @@
 .btn-admin:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-primary-admin { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #1a1410; width: 100%; padding: 12px; }
 .btn-primary-admin:hover { filter: brightness(1.1); background: linear-gradient(135deg, #ffd700, #ffaa00); }
-.btn-save   { background: linear-gradient(135deg, #00b855, #008c40); color: #fff; }
+.btn-save   { background: linear-gradient(135deg, #00b855, #008c40); color: #fff; position: relative; }
 .btn-save:hover { background: linear-gradient(135deg, #00d060, #00a04a); }
+/* Unsaved-changes indicator */
+.btn-save.has-changes {
+  box-shadow: 0 0 16px rgba(255,215,0,0.5);
+  animation: savePulse 1.6s ease-in-out infinite;
+}
+.btn-save.has-changes::after {
+  content: '';
+  position: absolute;
+  top: -4px; right: -4px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #ffd700;
+  border: 2px solid #0d1730;
+  box-shadow: 0 0 8px rgba(255,215,0,0.9);
+}
+@keyframes savePulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.35); }
+  50%       { box-shadow: 0 0 22px rgba(255,215,0,0.65); }
+}
 .btn-danger { background: rgba(220,60,30,0.22); color: #ff8060; border-color: rgba(220,60,30,0.4); }
 .btn-danger:hover { background: rgba(220,60,30,0.4); color: #fff; }
 .btn-ghost  { background: transparent; border-color: rgba(255,255,255,0.18); color: #aab; }
@@ -304,17 +355,46 @@
   border-bottom-color: #ffd700;
 }
 .tab-panel { display: none; }
-.tab-panel.active { display: block; animation: fadeInUp .25s ease-out; }
+.tab-panel.active {
+  display: block;
+  animation: fadeInUp .25s ease-out;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;               /* THE scroll area for tab content */
+  padding-right: 8px;
+  padding-bottom: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+.tab-panel.active::-webkit-scrollbar { width: 8px; }
+.tab-panel.active::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.16); border-radius: 4px;
+}
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Rounds toolbar / search ──────────────────────── */
+/* Sticky inside the scrolling panel so search + ADD are always at hand */
 .rounds-toolbar {
-  display: flex; align-items: center; gap: 14px;
-  margin-bottom: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex; align-items: center; gap: 12px;
+  padding: 2px 0 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(180deg, #101d3c 0%, #101d3c 78%, transparent 100%);
 }
+.btn-add-round-top {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 10px 16px;
+  background: rgba(74,159,255,0.14);
+  border: 1px solid rgba(74,159,255,0.45);
+  color: #4a9fff;
+}
+.btn-add-round-top:hover { background: rgba(74,159,255,0.26); color: #fff; }
 .search-box {
   flex: 1;
   display: flex; align-items: center; gap: 8px;
@@ -345,29 +425,45 @@
 }
 
 /* ── Rounds ───────────────────────────────────────── */
+/* Panel scrolls; the list itself flows naturally */
 .rounds-container {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  max-height: calc(100vh - 360px);
-  min-height: 200px;
-  overflow-y: auto;
-  padding-right: 6px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.2) transparent;
-}
-.rounds-container::-webkit-scrollbar { width: 8px; }
-.rounds-container::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.16); border-radius: 4px;
+  gap: 12px;
 }
 .round-card {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 10px;
-  padding: 14px 16px;
-  transition: border-color .2s;
+  padding: 12px 16px;
+  transition: border-color .2s, background .2s;
 }
 .round-card:hover { border-color: rgba(255,255,255,0.16); }
+.round-card.expanded {
+  border-color: rgba(74,159,255,0.4);
+  background: rgba(74,159,255,0.05);
+}
+
+/* Collapse / expand: collapsed cards show only the question row */
+.round-card .answers-list,
+.round-card .btn-add-answer { display: none; }
+.round-card.expanded .answers-list { display: flex; }
+.round-card.expanded .btn-add-answer { display: inline-flex; }
+
+.round-toggle .ico-svg { transition: transform .2s; }
+.round-card.expanded .round-toggle .ico-svg { transform: rotate(180deg); }
+
+.answer-count-chip {
+  flex-shrink: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #8899cc;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 4px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
 .round-head {
   display: flex;
   align-items: center;
