@@ -80,8 +80,45 @@
         faceoffTurn:   state.faceoff.turn,
         faceoffWinner: state.faceoff.winner,
         fastMoneyNext: $('btn-start-round')?.dataset.fastMoney === 'true',
+        fm: buildFMSync(),
       },
     });
+  }
+
+  // Fast Money state for the remote host panel (null outside FM).
+  function buildFMSync() {
+    if (state.phase !== 'fastMoney') return null;
+    const questions = fmQuestions();
+    const stage = state.fmStage;
+    const p = state.fmCurrentPlayer;
+    const q = state.fmCurrentQ;
+
+    const sync = {
+      stage,
+      player: p,
+      q,
+      questionCount: questions.length,
+      timeLeft: state.fmTimeLeft,
+      scores: [...state.fmScores],
+      total: state.fmScores[0] + state.fmScores[1],
+      target: GAME_DATA.settings.fastMoneyTarget || 200,
+      teamName: state.teams[state.fmTeam]?.name || '',
+    };
+
+    if (stage === 'entry' && questions[q]) {
+      sync.question = questions[q].question;
+    }
+    if (stage === 'grading' && questions[q]) {
+      const rec = state.fmAnswers[p][q];
+      sync.grading = {
+        question: questions[q].question,
+        said: rec.said ? (rec.text || '(no answer)') : null, // null until revealed
+        revealed: rec.said,
+        bank: questions[q].answers.map((a) => ({ text: a.text, points: a.points })),
+        suggested: rec.said ? fmMatchBank(q, rec.text) : -1,
+      };
+    }
+    return sync;
   }
 
   // ── Screen management ──────────────────────────────────────
@@ -278,6 +315,8 @@
           faceoffReveal(ans.id);
         } else if (state.phase === 'playing' || state.phase === 'steal') {
           revealAnswer(ans.id);
+        } else if (state.phase === 'roundEnd') {
+          revealLeftover(ans.id);
         }
       });
 
@@ -322,38 +361,51 @@
     }
   }
 
-  // ── REVEAL ALL REMAINING ───────────────────────────────────
+  // ── REVEAL ALL / END PLAY ──────────────────────────────────
+  // During play or a steal this ENDS the round (pot to the active
+  // team). Nothing auto-flips: any still-covered answers wait on the
+  // board for the host to reveal them one by one during roundEnd.
+  // Pressing it again during roundEnd flips all remaining leftovers.
   function revealAllAnswers() {
-    if (state.phase !== 'playing' && state.phase !== 'steal' && state.phase !== 'revealAll') return;
-    revealAndEnd(state.activeTeam);
+    if (state.phase === 'playing' || state.phase === 'steal') {
+      endRound(state.activeTeam);
+    } else if (state.phase === 'roundEnd') {
+      revealAllLeftovers();
+    }
   }
 
-  // Reveal remaining tiles for the audience, then award points to winnerIdx.
-  // IMPORTANT: only the points already IN PLAY on the board (revealed
-  // answers) are awarded. Unanswered answers are shown dimmed but do NOT
-  // add to the pot — this is the Family Feud steal rule.
-  function revealAndEnd(winnerIdx) {
-    setPhase('revealAll');
-    Sounds.revealAll();
+  // Host-controlled reveal of a leftover (unanswered) answer after the
+  // round has ended. Shown dimmed — points are NOT added to anything;
+  // only answers found in play count (the Family Feud steal rule).
+  function revealLeftover(ansId) {
+    if (state.phase !== 'roundEnd') return;
+    if (state.revealedAnswers.has(ansId)) return;
+    const tile = $q(`.tile[data-ans-id="${ansId}"]`);
+    if (!tile) return;
+    tile.classList.add('revealed', 'dimmed');
+    state.revealedAnswers.add(ansId);
+    Sounds.reveal();
+    broadcastState();
+    updateRoundEndStatus();
+  }
 
-    // Unhurried cadence — each remaining answer gets a moment to land
-    const REVEAL_GAP = 700;
-    state.currentRound.answers.forEach((ans, i) => {
-      if (!state.revealedAnswers.has(ans.id)) {
-        setTimeout(() => {
-          const tile = $q(`.tile[data-ans-id="${ans.id}"]`);
-          if (tile) {
-            tile.classList.add('revealed', 'dimmed');
-            state.revealedAnswers.add(ans.id); // shown, but points NOT added
-            Sounds.reveal();
-            broadcastState();
-          }
-        }, i * REVEAL_GAP);
-      }
+  // Convenience: flip every remaining leftover with a steady cadence.
+  function revealAllLeftovers() {
+    if (state.phase !== 'roundEnd') return;
+    const remaining = state.currentRound.answers.filter((a) => !state.revealedAnswers.has(a.id));
+    remaining.forEach((ans, i) => {
+      setTimeout(() => revealLeftover(ans.id), i * 700);
     });
+  }
 
-    const delay = state.currentRound.answers.length * REVEAL_GAP;
-    setTimeout(() => endRound(winnerIdx), delay + 1200);
+  function updateRoundEndStatus() {
+    if (state.phase !== 'roundEnd') return;
+    const left = state.currentRound.answers.length - state.revealedAnswers.size;
+    updateStatusBar(
+      left > 0
+        ? `${left} answer${left === 1 ? '' : 's'} still covered — tap to reveal, or press NEXT ROUND.`
+        : 'Board complete! Press NEXT ROUND when everyone is ready.'
+    );
   }
 
   // ── ADD STRIKE ─────────────────────────────────────────────
@@ -391,7 +443,7 @@
     Sounds.stealWin();
     const winner = state.activeTeam;
     showOverlay(`${state.teams[winner].name.toUpperCase()}\nSTEALS IT!`, 2000);
-    setTimeout(() => revealAndEnd(winner), 2200);
+    setTimeout(() => { if (state.phase === 'steal') endRound(winner); }, 2200);
   }
 
   // ── STEAL WRONG ────────────────────────────────────────────
@@ -400,7 +452,7 @@
     Sounds.stealFail();
     const winner = 1 - state.activeTeam; // original playing team wins
     showOverlay(`${state.teams[winner].name.toUpperCase()}\nKEEPS THE POINTS!`, 2000);
-    setTimeout(() => revealAndEnd(winner), 2200);
+    setTimeout(() => { if (state.phase === 'steal') endRound(winner); }, 2200);
   }
 
   // ── PASS CONTROL (mid-round host override) ─────────────────
@@ -435,13 +487,9 @@
       2500
     );
 
-    // No auto-advance: the board stays on the fully revealed answers so
-    // everyone can take them in. The host presses NEXT ROUND (board or
-    // remote panel) when ready to move on.
-    setTimeout(() => {
-      if (state.phase !== 'roundEnd') return;
-      updateStatusBar('Take it in! Press NEXT ROUND when everyone is ready.');
-    }, 2600);
+    // No auto-advance and no auto-reveal: leftover answers stay covered
+    // until the host taps them (or hits REVEAL ALL), then NEXT ROUND.
+    setTimeout(updateRoundEndStatus, 2600);
   }
 
   // Move from roundEnd → setup for the next round (or arm Fast Money).
@@ -642,7 +690,7 @@
     playing:       'Click a tile to reveal an answer, or hit STRIKE for a wrong answer.',
     steal:         'Steal attempt — click correct tile, or STEAL WRONG if incorrect.',
     revealAll:     'Revealing all answers…',
-    roundEnd:      'Round over! Points awarded.',
+    roundEnd:      'Round over! Reveal leftover answers, then press NEXT ROUND.',
     fastMoney:     'FAST MONEY round!',
     gameEnd:       '',
   };
@@ -667,7 +715,7 @@
     $('btn-choose-pass').disabled    = !isChoosing;
     $('btn-steal-correct').disabled  = !isSteal;
     $('btn-steal-wrong').disabled    = !isSteal;
-    $('btn-reveal-all').disabled     = !(isPlaying || isSteal);
+    $('btn-reveal-all').disabled     = !(isPlaying || isSteal || p === 'roundEnd');
     $('btn-next-round').disabled     = p !== 'roundEnd';
     $('btn-end-game').disabled       = ['intro', 'lobby', 'gameEnd'].includes(p);
 
@@ -880,6 +928,10 @@
 
   // ── ENTRY STAGE ────────────────────────────────────────────
   function startFMPlayer(playerIdx) {
+    if (state.phase !== 'fastMoney') return;
+    // Player 1 only from the start, player 2 only after player 1 is graded
+    if (playerIdx === 0 && state.fmStage !== 'idle') return;
+    if (playerIdx === 1 && state.fmStage !== 'between') return;
     state.fmCurrentPlayer = playerIdx;
     state.fmCurrentQ = 0;
     state.fmStage = 'entry';
@@ -893,8 +945,8 @@
     $('fm-grading-box').classList.add('hidden');
 
     fmShowView('entry');
-    fmShowEntryQuestion();
-    startFMTimer(timeLimit);
+    startFMTimer(timeLimit);      // set the clock BEFORE the first broadcast
+    fmShowEntryQuestion();        // broadcasts question + correct timeLeft
     updateStatusBar(`Player ${playerIdx + 1} — type their answer, ENTER for next question!`);
   }
 
@@ -905,12 +957,15 @@
     const input = $('fm-entry-input');
     input.value = '';
     input.focus();
+    broadcastState(); // remote panel sees the new question
   }
 
-  function fmEntrySubmit() {
+  // Save the typed answer and advance. `textOverride` comes from the
+  // remote host panel; otherwise the board's input box is read.
+  function fmEntrySubmit(textOverride) {
     if (state.fmStage !== 'entry') return;
     const p = state.fmCurrentPlayer;
-    const text = $('fm-entry-input').value.trim();
+    const text = (textOverride !== undefined ? String(textOverride) : $('fm-entry-input').value).trim();
     state.fmAnswers[p][state.fmCurrentQ].text = text; // empty = pass
     Sounds.tick();
 
@@ -938,6 +993,7 @@
     updateStatusBar(
       `Time! Now reveal Player ${state.fmCurrentPlayer + 1}'s answers one by one and award points.`
     );
+    broadcastState();
   }
 
   function fmHighlightRow(idx) {
@@ -1008,10 +1064,12 @@
       : 'No bank match found — pick one or award 0:';
     $('fm-match-wrap').classList.remove('hidden');
     $('fm-btn-reveal-said').disabled = true;
+    broadcastState(); // remote panel gets the revealed answer + bank
   }
 
-  // Step 2 — award the selected bank answer's points.
-  function fmAwardPoints() {
+  // Step 2 — award the selected bank answer's points. `bankIdxOverride`
+  // comes from the remote host panel; otherwise the board's dropdown.
+  function fmAwardPoints(bankIdxOverride) {
     if (state.fmStage !== 'grading') return;
     const p = state.fmCurrentPlayer;
     const q = state.fmCurrentQ;
@@ -1019,7 +1077,9 @@
     if (!rec.said || rec.graded) return;
 
     const bank = fmQuestions()[q].answers;
-    const idx = parseInt($('fm-bank-select').value);
+    const idx = bankIdxOverride !== undefined
+      ? parseInt(bankIdxOverride)
+      : parseInt($('fm-bank-select').value);
     const pts = idx >= 0 && bank[idx] ? bank[idx].points : 0;
 
     rec.pts = pts;
@@ -1046,6 +1106,7 @@
       $('fm-grading-qnum').textContent = `Q${state.fmCurrentQ + 1}`;
       $('fm-btn-reveal-said').disabled = false;
       $('fm-match-wrap').classList.add('hidden');
+      broadcastState();
     }
   }
 
@@ -1063,6 +1124,7 @@
       state.fmStage = 'done';
       finishFastMoney();
     }
+    broadcastState();
   }
 
   function startFMTimer(seconds) {
@@ -1082,6 +1144,8 @@
       if (state.fmTimeLeft <= 0) {
         clearFMTimer();
         endFMEntry(true); // time's up mid-entry
+      } else {
+        broadcastState(); // keep the remote panel's clock in step
       }
     }, 1000);
   }
@@ -1180,6 +1244,7 @@
       if (ans) {
         if (state.phase === 'faceoffAnswer') faceoffReveal(ans.id);
         else if (state.phase === 'playing' || state.phase === 'steal') revealAnswer(ans.id);
+        else if (state.phase === 'roundEnd') revealLeftover(ans.id);
       }
     }
 
@@ -1204,6 +1269,8 @@
           faceoffReveal(Number(msg.ansId));
         } else if (state.phase === 'playing' || state.phase === 'steal') {
           revealAnswer(Number(msg.ansId));
+        } else if (state.phase === 'roundEnd') {
+          revealLeftover(Number(msg.ansId));
         }
         break;
       case 'strike':         addStrike(); break;
@@ -1215,6 +1282,18 @@
       case 'reveal-all':     revealAllAnswers(); break;
       case 'next-round':     advanceAfterRound(); break;
       case 'buzz':           buzzIn(Number(msg.team)); break;
+      // Fast Money remote control
+      case 'fm-start':       startFMPlayer(Number(msg.player)); break;
+      case 'fm-entry':       fmEntrySubmit(String(msg.text ?? '')); break;
+      case 'fm-reveal-said': fmRevealSaid(); break;
+      case 'fm-award':       fmAwardPoints(Number(msg.bankIdx)); break;
+      case 'fm-finish':
+        if (state.phase === 'fastMoney' && state.fmStage !== 'done') {
+          clearFMTimer();
+          state.fmStage = 'done';
+          finishFastMoney();
+        }
+        break;
       case 'end-game':
         if (!['intro', 'lobby', 'gameEnd'].includes(state.phase)) endGameNow();
         break;
