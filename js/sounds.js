@@ -77,14 +77,48 @@ const Sounds = (() => {
 
   // ── Public sound methods ──────────────────────────────────
 
-  // Intro theme — short ascending fanfare
+  // Opening theme — a bouncy ~6s game-show tune: lead melody over a
+  // walking bass with hi-hats and a big held final chord.
   function theme() {
-    const melody = [
-      [392, 0.12], [523, 0.12], [659, 0.12], [784, 0.18],
-      [659, 0.10], [784, 0.10], [1047, 0.45],
+    if (muted) return;
+    const B = 0.23; // one eighth-note at ~130 BPM
+    const N = {
+      C3: 130.81, F3: 174.61, G3: 196.00,
+      E4: 329.63, G4: 392.00, B4: 493.88,
+      C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46,
+      G5: 783.99, A5: 880.00, C6: 1046.5,
+    };
+
+    // Lead melody: [freq, startBeat, lengthBeats]
+    const lead = [
+      [N.C5, 0, 1], [N.E5, 1, 1], [N.G5, 2, 1], [N.E5, 3, 1],
+      [N.A5, 4, 1.5], [N.G5, 5.5, 0.5], [N.E5, 6, 1], [N.C5, 7, 1],
+      [N.D5, 8, 1], [N.F5, 9, 1], [N.A5, 10, 1], [N.F5, 11, 1],
+      [N.G5, 12, 2], [N.E5, 14, 1], [N.C5, 15, 1],
+      [N.C5, 16, 0.5], [N.D5, 16.5, 0.5], [N.E5, 17, 0.5], [N.F5, 17.5, 0.5],
+      [N.G5, 18, 1], [N.A5, 19, 1], [N.C6, 20, 3.5],
     ];
-    let t = 0;
-    melody.forEach(([f, d]) => { tone(f, d + 0.08, 'sine', 0.38, t); t += d; });
+    lead.forEach(([f, s, l]) => tone(f, l * B * 0.92, 'triangle', 0.32, s * B));
+
+    // Soft harmony under the key hits
+    [[N.E4, 0], [N.G4, 2], [N.C5, 4], [N.B4, 12], [N.E5, 20], [N.G5, 20]]
+      .forEach(([f, s]) => tone(f, B * 3, 'sine', 0.14, s * B));
+
+    // Walking bass — C / F / G / C
+    const bassLine = [
+      [N.C3, 0], [N.C3, 2], [N.C3, 4], [N.C3, 6],
+      [N.F3, 8], [N.F3, 10], [N.G3, 12], [N.G3, 14],
+      [N.C3, 16], [N.C3, 18], [N.G3, 20], [N.C3, 22],
+    ];
+    bassLine.forEach(([f, s]) => tone(f, B * 1.7, 'triangle', 0.3, s * B));
+
+    // Hi-hats on every beat, accented off-beats
+    for (let s = 0; s < 22; s++) {
+      noise(0.05, 6000, 12000, s % 2 ? 0.06 : 0.035, s * B);
+    }
+
+    // Final chord swell
+    [N.C5, N.E5, N.G5].forEach((f) => tone(f, B * 4, 'sine', 0.16, 20 * B));
   }
 
   // Buzz-in sound — two-tone alert

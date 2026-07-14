@@ -336,6 +336,8 @@
     setPhase('revealAll');
     Sounds.revealAll();
 
+    // Unhurried cadence — each remaining answer gets a moment to land
+    const REVEAL_GAP = 700;
     state.currentRound.answers.forEach((ans, i) => {
       if (!state.revealedAnswers.has(ans.id)) {
         setTimeout(() => {
@@ -343,14 +345,15 @@
           if (tile) {
             tile.classList.add('revealed', 'dimmed');
             state.revealedAnswers.add(ans.id); // shown, but points NOT added
+            Sounds.reveal();
             broadcastState();
           }
-        }, i * 300);
+        }, i * REVEAL_GAP);
       }
     });
 
-    const delay = state.currentRound.answers.length * 300;
-    setTimeout(() => endRound(winnerIdx), delay + 900);
+    const delay = state.currentRound.answers.length * REVEAL_GAP;
+    setTimeout(() => endRound(winnerIdx), delay + 1200);
   }
 
   // ── ADD STRIKE ─────────────────────────────────────────────
@@ -432,7 +435,13 @@
       2500
     );
 
-    setTimeout(advanceAfterRound, 2800);
+    // No auto-advance: the board stays on the fully revealed answers so
+    // everyone can take them in. The host presses NEXT ROUND (board or
+    // remote panel) when ready to move on.
+    setTimeout(() => {
+      if (state.phase !== 'roundEnd') return;
+      updateStatusBar('Take it in! Press NEXT ROUND when everyone is ready.');
+    }, 2600);
   }
 
   // Move from roundEnd → setup for the next round (or arm Fast Money).
