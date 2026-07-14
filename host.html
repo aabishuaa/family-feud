@@ -263,6 +263,75 @@
 
     .hidden { display: none !important; }
 
+    /* ── Fast Money remote control ── */
+    .hcfm {
+      display: flex; flex-direction: column; gap: 12px;
+      background: rgba(255,215,0,.05);
+      border: 2px solid rgba(255,215,0,.4);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .hcfm-top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; flex-wrap: wrap;
+    }
+    .hcfm-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 20px; letter-spacing: .18em; color: var(--gold);
+      text-shadow: 0 0 14px rgba(255,215,0,.5);
+    }
+    .hcfm-timer {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 34px; line-height: 1; color: var(--gold);
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(255,215,0,.35);
+      padding: 4px 16px; border-radius: 10px;
+      min-width: 74px; text-align: center;
+    }
+    .hcfm-timer.urgent { color: var(--red); border-color: rgba(255,59,48,.6); }
+    .hcfm-scores {
+      display: flex; gap: 14px; align-items: baseline;
+      font-size: 13px; color: var(--text-dim); letter-spacing: .06em;
+    }
+    .hcfm-scores b { color: #fff; font-size: 16px; }
+    .hcfm-total { color: var(--gold); font-size: 18px; font-weight: 700; }
+    .hcfm-stagehint {
+      font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+      color: #b8a860; text-align: center;
+    }
+    .hcfm-question {
+      font-size: clamp(15px, 3.4vw, 19px); font-weight: 600;
+      line-height: 1.4; text-align: center; color: #fff;
+      padding: 4px 8px;
+    }
+    #hcfm-input {
+      width: 100%; padding: 13px 16px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 18px; font-weight: 600; text-align: center;
+      color: #fff;
+      background: rgba(255,255,255,.06);
+      border: 2px solid rgba(255,215,0,.4);
+      border-radius: 10px; outline: none;
+    }
+    #hcfm-input:focus { border-color: var(--gold); box-shadow: 0 0 18px rgba(255,215,0,.25); }
+    .hcfm-said {
+      text-align: center;
+      font-size: 17px; font-weight: 700; letter-spacing: .04em;
+      color: #4cff91;
+      background: rgba(0,200,80,.1);
+      border: 1px solid rgba(0,200,80,.4);
+      border-radius: 8px; padding: 9px 12px;
+    }
+    #hcfm-select {
+      width: 100%; padding: 10px;
+      background: #0d1730;
+      border: 1px solid rgba(255,215,0,.35); border-radius: 8px;
+      color: #fff; font-family: 'Oswald', sans-serif; font-size: 14px;
+    }
+    .hcfm-row { display: flex; gap: 8px; }
+    .hcfm-row .hc-btn { flex: 1; }
+
     /* Inline SVG icons */
     .ico { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
     .ico-svg { width: 1em; height: 1em; display: block; }
@@ -291,6 +360,36 @@
         <span class="hc-pts-chip"   id="hc-pts">POT: 0</span>
       </div>
       <div class="hc-question" id="hc-question">Waiting for the round to start…</div>
+    </div>
+
+    <!-- Fast Money remote control (visible only during Fast Money) -->
+    <div class="hcfm hidden" id="hcfm">
+      <div class="hcfm-top">
+        <span class="hcfm-title">FAST MONEY</span>
+        <div class="hcfm-scores">
+          <span>P1 <b id="hcfm-s1">0</b></span>
+          <span>P2 <b id="hcfm-s2">0</b></span>
+          <span class="hcfm-total"><span id="hcfm-total">0</span> / <span id="hcfm-target">200</span></span>
+        </div>
+        <span class="hcfm-timer" id="hcfm-timer">—</span>
+      </div>
+      <div class="hcfm-stagehint" id="hcfm-stagehint">—</div>
+      <div class="hcfm-question hidden" id="hcfm-question">—</div>
+
+      <!-- Entry: type the player's answer here, Enter = next question -->
+      <input type="text" id="hcfm-input" class="hidden" placeholder="Type their answer, press ENTER…" autocomplete="off">
+
+      <!-- Grading -->
+      <div class="hcfm-said hidden" id="hcfm-said">—</div>
+      <select id="hcfm-select" class="hidden"></select>
+
+      <div class="hcfm-row">
+        <button class="hc-btn hc-green hidden"  id="hcfm-start1"><i class="ico" data-icon="play"></i><span>PLAYER 1 START</span></button>
+        <button class="hc-btn hc-blue hidden"   id="hcfm-start2"><i class="ico" data-icon="play"></i><span>PLAYER 2 START</span></button>
+        <button class="hc-btn hc-yellow hidden" id="hcfm-reveal"><i class="ico" data-icon="grid"></i><span>REVEAL ANSWER</span></button>
+        <button class="hc-btn hc-green hidden"  id="hcfm-award"><i class="ico" data-icon="check"></i><span>AWARD POINTS</span></button>
+      </div>
+      <button class="hc-btn hc-orange" id="hcfm-finish"><i class="ico" data-icon="stop"></i><span>FINISH FAST MONEY</span></button>
     </div>
 
     <div class="hc-answers" id="hc-answers">
@@ -444,7 +543,90 @@
           const w = names[s.faceoffWinner] || 'Winner';
           return `${w} won the face-off — PLAY or PASS TO THEM?`;
         }
+        if (phase === 'roundEnd') {
+          return 'Round over — tap covered answers to reveal them, then NEXT ROUND';
+        }
+        if (phase === 'fastMoney') {
+          return `FAST MONEY — ${s.fm?.teamName || 'winning team'} playing`;
+        }
         return phaseText[phase] || 'Waiting…';
+      }
+
+      // ── Fast Money remote rendering ─────────────────────────
+      // The input and select are persistent elements; we only toggle
+      // visibility and refresh contents when the target changes, so
+      // typing on the remote is never interrupted by sync re-renders.
+      let fmSelectKey = null; // player-q key the select was built for
+
+      function renderFM(fm) {
+        const box = $('hcfm');
+        if (!fm) { box.classList.add('hidden'); fmSelectKey = null; return; }
+        box.classList.remove('hidden');
+
+        $('hcfm-s1').textContent = fm.scores[0];
+        $('hcfm-s2').textContent = fm.scores[1];
+        $('hcfm-total').textContent = fm.total;
+        $('hcfm-target').textContent = fm.target;
+        $('hcfm-timer').textContent = fm.stage === 'entry' ? fm.timeLeft : '—';
+        $('hcfm-timer').classList.toggle('urgent', fm.stage === 'entry' && fm.timeLeft <= 5);
+
+        const stageHints = {
+          idle:    'Get Player 1 ready (Player 2 out of earshot!)',
+          entry:   `Player ${fm.player + 1} — question ${fm.q + 1} of ${fm.questionCount}: type their answer, ENTER for next`,
+          grading: `Revealing Player ${fm.player + 1}'s answers — Q${fm.q + 1} of ${fm.questionCount}`,
+          between: `Player 1 scored ${fm.scores[0]} — bring in Player 2`,
+          done:    'Fast Money complete!',
+        };
+        $('hcfm-stagehint').textContent = stageHints[fm.stage] || '—';
+
+        // Question line (entry + grading)
+        const qText = fm.stage === 'entry' ? fm.question
+                    : fm.stage === 'grading' ? fm.grading?.question
+                    : null;
+        $('hcfm-question').classList.toggle('hidden', !qText);
+        if (qText) $('hcfm-question').textContent = qText;
+
+        // Entry input
+        const showInput = fm.stage === 'entry';
+        const input = $('hcfm-input');
+        input.classList.toggle('hidden', !showInput);
+        if (!showInput) input.value = '';
+
+        // Grading: what they said + bank select
+        const g = fm.grading;
+        const showSaid = fm.stage === 'grading' && g?.revealed;
+        $('hcfm-said').classList.toggle('hidden', !showSaid);
+        if (showSaid) $('hcfm-said').textContent = `They said: ${g.said}`;
+
+        const sel = $('hcfm-select');
+        sel.classList.toggle('hidden', !showSaid);
+        if (showSaid) {
+          const key = `${fm.player}-${fm.q}`;
+          if (fmSelectKey !== key) {
+            fmSelectKey = key;
+            sel.innerHTML = '';
+            g.bank.forEach((a, i) => {
+              const opt = document.createElement('option');
+              opt.value = i;
+              opt.textContent = `${a.text} — ${a.points} pts`;
+              sel.appendChild(opt);
+            });
+            const none = document.createElement('option');
+            none.value = -1;
+            none.textContent = 'No match — 0 pts';
+            sel.appendChild(none);
+            sel.value = String(g.suggested);
+          }
+        } else if (fm.stage !== 'grading') {
+          fmSelectKey = null;
+        }
+
+        // Stage buttons
+        $('hcfm-start1').classList.toggle('hidden', fm.stage !== 'idle');
+        $('hcfm-start2').classList.toggle('hidden', fm.stage !== 'between');
+        $('hcfm-reveal').classList.toggle('hidden', !(fm.stage === 'grading' && !g?.revealed));
+        $('hcfm-award').classList.toggle('hidden', !showSaid);
+        $('hcfm-finish').disabled = fm.stage === 'done';
       }
 
       function render() {
@@ -462,6 +644,13 @@
         $('hc-question').textContent = s.question ||
           (phase === 'lobby' ? 'Waiting for the game to begin…' : 'Waiting for the round to start…');
 
+        // Fast Money panel (replaces the round controls while active)
+        const inFM = phase === 'fastMoney';
+        renderFM(inFM ? (s.fm || null) : null);
+        $('hc-answers').classList.toggle('hidden', inFM);
+        document.querySelector('.hc-info-row').classList.toggle('hidden', inFM);
+        $('hc-actions').classList.toggle('hidden', inFM);
+
         // Answers
         const wrap = $('hc-answers');
         wrap.innerHTML = '';
@@ -469,7 +658,7 @@
         if (!answers.length) {
           wrap.innerHTML = '<div class="hc-answers-empty">Answers will appear here when a round starts.</div>';
         } else {
-          const canReveal = phase === 'playing' || phase === 'steal' || phase === 'faceoffAnswer';
+          const canReveal = phase === 'playing' || phase === 'steal' || phase === 'faceoffAnswer' || phase === 'roundEnd';
           answers.forEach((a, i) => {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -516,7 +705,7 @@
         $('b-pass').disabled       = !isPlaying;
         $('b-steal-ok').disabled   = !isSteal;
         $('b-steal-no').disabled   = !isSteal;
-        $('b-reveal-all').disabled = !(isPlaying || isSteal);
+        $('b-reveal-all').disabled = !(isPlaying || isSteal || phase === 'roundEnd');
         $('b-next').disabled       = phase !== 'roundEnd';
         $('b-end').disabled        = ['intro', 'lobby', 'gameEnd'].includes(phase);
       }
@@ -534,6 +723,24 @@
       $('b-steal-no').addEventListener('click', () => send('steal-wrong'));
       $('b-reveal-all').addEventListener('click', () => send('reveal-all'));
       $('b-next').addEventListener('click', () => send('next-round'));
+      // Fast Money remote controls
+      $('hcfm-start1').addEventListener('click', () => send('fm-start', { player: 0 }));
+      $('hcfm-start2').addEventListener('click', () => send('fm-start', { player: 1 }));
+      $('hcfm-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          send('fm-entry', { text: $('hcfm-input').value });
+          $('hcfm-input').value = '';
+        }
+      });
+      $('hcfm-reveal').addEventListener('click', () => send('fm-reveal-said'));
+      $('hcfm-award').addEventListener('click', () => {
+        send('fm-award', { bankIdx: Number($('hcfm-select').value) });
+      });
+      $('hcfm-finish').addEventListener('click', () => {
+        if (confirm('Finish Fast Money now with the current total?')) send('fm-finish');
+      });
+
       $('b-end').addEventListener('click', () => {
         if (confirm('End the game now? The team with the highest score wins.')) send('end-game');
       });
