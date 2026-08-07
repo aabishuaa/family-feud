@@ -1077,9 +1077,9 @@
     if (!rec.said || rec.graded) return;
 
     const bank = fmQuestions()[q].answers;
-    const idx = bankIdxOverride !== undefined
-      ? parseInt(bankIdxOverride)
-      : parseInt($('fm-bank-select').value);
+    // Fall back to the board's dropdown unless a real number was passed
+    const override = Number(bankIdxOverride);
+    const idx = Number.isInteger(override) ? override : parseInt($('fm-bank-select').value);
     const pts = idx >= 0 && bank[idx] ? bank[idx].points : 0;
 
     rec.pts = pts;
@@ -1360,8 +1360,10 @@
         fmEntrySubmit();
       }
     });
-    $('fm-btn-reveal-said').addEventListener('click', fmRevealSaid);
-    $('fm-btn-award').addEventListener('click', fmAwardPoints);
+    $('fm-btn-reveal-said').addEventListener('click', () => fmRevealSaid());
+    // NB: pass no argument — a bare listener would hand fmAwardPoints the
+    // click event as the bank-index override.
+    $('fm-btn-award').addEventListener('click', () => fmAwardPoints());
     $('fm-btn-end-fm').addEventListener('click', () => {
       if (!confirm('Finish Fast Money now with the current total?')) return;
       clearFMTimer();
