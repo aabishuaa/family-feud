@@ -38,6 +38,8 @@ const Icons = (() => {
     volumeOff: '<path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
     trophy:    '<path d="M7 4.5h10v3a5 5 0 01-10 0z"/><path d="M7 5.5H4.5v1.5A2.5 2.5 0 007 9.5M17 5.5h2.5v1.5A2.5 2.5 0 0117 9.5M12 12.5V16M9 20.5h6M10 16h4l.5 4.5h-5z"/>',
     clock:     '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    download:  '<path d="M12 3.5v11M7.5 10l4.5 4.5L16.5 10M4 19.5h16"/>',
+    upload:    '<path d="M12 15.5v-11M7.5 9l4.5-4.5L16.5 9M4 19.5h16"/>',
   };
 
   function svg(name, extraClass = '') {

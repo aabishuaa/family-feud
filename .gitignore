@@ -1,2 +1,6 @@
 node_modules/
-data/
+
+# Your game modes (data/packs.json) ARE tracked so they travel with the
+# code to every clone and deployment. Only the transient files are ignored.
+data/*.bak
+data/*.tmp

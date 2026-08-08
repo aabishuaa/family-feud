@@ -631,6 +631,38 @@
     });
     $('btn-duplicate').addEventListener('click', duplicatePack);
 
+    // ── Backup / restore ───────────────────────────────────
+    $('btn-export').addEventListener('click', async () => {
+      await persistPack({ silent: true });   // make sure the file is current
+      window.location.href = '/api/export';  // browser downloads the JSON
+      toast('Backup downloading…');
+    });
+
+    $('btn-import').addEventListener('click', () => $('import-file').click());
+
+    $('import-file').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      e.target.value = ''; // allow re-picking the same file later
+      if (!file) return;
+      try {
+        const parsed = JSON.parse(await file.text());
+        const count = Array.isArray(parsed?.packs) ? parsed.packs.length
+                    : Array.isArray(parsed) ? parsed.length : 1;
+        const ok = await confirmDialog(
+          'Restore modes?',
+          `This will add ${count} mode${count === 1 ? '' : 's'} from "${file.name}". ` +
+          'Modes with the same name are updated; built-in modes are never touched.',
+          'RESTORE',
+        );
+        if (!ok) return;
+        const res = await api('/api/import', { method: 'POST', body: JSON.stringify(parsed) });
+        await refreshPackList();
+        toast(`Restored — ${res.added} added, ${res.updated} updated.`);
+      } catch (err) {
+        toast('Restore failed: ' + err.message, true);
+      }
+    });
+
     // Rounds search
     const searchInput = $('rounds-search');
     const searchClear = $('rounds-search-clear');

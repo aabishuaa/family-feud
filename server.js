@@ -169,7 +169,7 @@ function safeSend(ws, data) {
 }
 
 // ── HTTP ─────────────────────────────────────────────────────
-app.use(express.json({ limit: '256kb' }));
+app.use(express.json({ limit: '4mb' })); // room for whole-library imports
 app.use(express.static(path.join(__dirname)));
 
 // List packs (summary only, no rounds payload)
@@ -233,6 +233,51 @@ app.delete('/api/packs/:id', (req, res) => {
   PACKS.splice(idx, 1);
   savePacks(PACKS);
   res.json({ ok: true });
+});
+
+// ── Backup / restore ─────────────────────────────────────────
+// Download every custom mode as a single JSON file.
+app.get('/api/export', (req, res) => {
+  const custom = PACKS.filter((p) => !p.builtIn);
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="family-feud-modes-${stamp}.json"`);
+  res.send(JSON.stringify({ exportedAt: new Date().toISOString(), packs: custom }, null, 2));
+});
+
+// Restore modes from a previously exported file. Merges by id:
+// existing custom modes are updated, new ones added, built-ins never
+// overwritten (a clashing import lands as a fresh copy instead).
+app.post('/api/import', (req, res) => {
+  const body = req.body;
+  const incoming = Array.isArray(body?.packs) ? body.packs
+                 : Array.isArray(body)        ? body
+                 : body?.name                 ? [body]
+                 : null;
+  if (!incoming) {
+    return res.status(400).json({ error: 'Expected a JSON file with a "packs" array.' });
+  }
+
+  let added = 0, updated = 0, skipped = 0;
+  for (const raw of incoming) {
+    if (!raw || typeof raw !== 'object' || !raw.name) { skipped++; continue; }
+    const wantedId = String(raw.id || '').trim() || slugify(raw.name);
+    const existing = PACKS.find((p) => p.id === wantedId);
+
+    if (existing && !existing.builtIn) {
+      PACKS[PACKS.indexOf(existing)] = sanitisePack(raw, existing);
+      updated++;
+    } else {
+      // No match, or it collides with a read-only built-in → add a copy
+      const id = uniqueId(existing ? slugify(raw.name) : wantedId);
+      const pack = sanitisePack(raw, { id, builtIn: false });
+      pack.id = id;
+      PACKS.push(pack);
+      added++;
+    }
+  }
+  savePacks(PACKS);
+  res.json({ ok: true, added, updated, skipped });
 });
 
 // Create a new game room
