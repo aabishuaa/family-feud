@@ -21,21 +21,44 @@ const wss    = new WebSocketServer({ server });
 const DATA_DIR  = path.join(__dirname, 'data');
 const PACKS_FILE = path.join(DATA_DIR, 'packs.json');
 
+const BACKUP_FILE = PACKS_FILE + '.bak';
+
+function readPacksFile(file) {
+  if (!fs.existsSync(file)) return null;
+  const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+  return Array.isArray(parsed?.packs) ? parsed.packs : null;
+}
+
 function loadPacks() {
   try {
-    if (!fs.existsSync(PACKS_FILE)) return null;
-    const txt = fs.readFileSync(PACKS_FILE, 'utf8');
-    const parsed = JSON.parse(txt);
-    if (Array.isArray(parsed?.packs)) return parsed.packs;
+    const packs = readPacksFile(PACKS_FILE);
+    if (packs) return packs;
   } catch (err) {
-    console.warn('Failed to load packs.json:', err.message);
+    console.warn('packs.json unreadable:', err.message, '— trying backup');
+  }
+  // Fall back to the previous good copy rather than starting empty
+  try {
+    const packs = readPacksFile(BACKUP_FILE);
+    if (packs) {
+      console.warn('Recovered game modes from packs.json.bak');
+      return packs;
+    }
+  } catch (err) {
+    console.warn('Backup also unreadable:', err.message);
   }
   return null;
 }
 
+// Atomic write: previous version is kept as .bak and the new file is
+// renamed into place, so an interrupted write can never truncate data.
 function savePacks(packs) {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(PACKS_FILE, JSON.stringify({ packs }, null, 2));
+  const tmp = PACKS_FILE + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify({ packs }, null, 2));
+  if (fs.existsSync(PACKS_FILE)) {
+    try { fs.copyFileSync(PACKS_FILE, BACKUP_FILE); } catch { /* non-fatal */ }
+  }
+  fs.renameSync(tmp, PACKS_FILE);
 }
 
 // In-memory cache of all packs (built-in + custom). Always written through.
@@ -189,6 +212,17 @@ app.put('/api/packs/:id', (req, res) => {
   PACKS[idx] = sanitisePack(req.body, PACKS[idx]);
   savePacks(PACKS);
   res.json({ pack: PACKS[idx] });
+});
+
+// Same as PUT, but reachable from navigator.sendBeacon (which only
+// issues POST) so edits survive the tab being closed mid-session.
+app.post('/api/packs/:id/save', (req, res) => {
+  const idx = PACKS.findIndex((p) => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Pack not found' });
+  if (PACKS[idx].builtIn) return res.status(403).json({ error: 'Built-in pack is read-only' });
+  PACKS[idx] = sanitisePack(req.body, PACKS[idx]);
+  savePacks(PACKS);
+  res.json({ ok: true });
 });
 
 // Delete pack

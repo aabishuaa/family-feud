@@ -101,10 +101,9 @@
 
   // ── Load a pack into the editor ──────────────────────────
   async function loadPack(id) {
-    if (dirty) {
-      const ok = await confirmDialog('Unsaved changes', 'Discard your changes and load a different pack?', 'DISCARD');
-      if (!ok) return;
-    }
+    if (currentPack && currentPack.id === id) return;
+    // Flush pending edits instead of asking the user to discard them
+    await persistPack({ silent: true });
     try {
       const data = await api(`/api/packs/${id}`);
       currentPack = data.pack;
@@ -128,6 +127,7 @@
     // Reset the rounds search + collapse state when opening a different pack
     roundQuery = '';
     expandedRounds.clear();
+    setSaveStatus(p.builtIn ? '' : 'saved');
     if ($('rounds-search')) $('rounds-search').value = '';
     if ($('rounds-search-clear')) $('rounds-search-clear').classList.add('hidden');
 
@@ -416,37 +416,92 @@
     $$('.tab-panel').forEach((p) => p.classList.toggle('active', p.dataset.tabPanel === name));
   }
 
-  // ── Save / create / delete ───────────────────────────────
-  async function savePack() {
-    if (!currentPack) return;
-    if (currentPack.builtIn) { toast('Built-in packs cannot be edited', true); return; }
-    const payload = {
+  // ── Autosave / save / create / delete ────────────────────
+  // Edits are persisted automatically shortly after you stop typing,
+  // and always flushed before anything that would navigate away from
+  // the current pack. Nothing is ever lost by forgetting to save.
+  const AUTOSAVE_DELAY = 700;
+  let saveTimer   = null;
+  let saving      = false;
+  let saveQueued  = false;
+
+  function currentPayload() {
+    return {
       name: $('pack-name').value.trim() || 'Untitled',
       icon: $('pack-icon').value.trim() || '🎯',
       settings: readSettings(),
       rounds: currentPack.rounds,
       fastMoneyRounds: currentPack.fastMoneyRounds,
     };
+  }
+
+  function scheduleAutosave() {
+    if (!currentPack || currentPack.builtIn) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => persistPack({ silent: true }), AUTOSAVE_DELAY);
+  }
+
+  // Writes the current pack to the server. Never re-renders the editor
+  // (that would steal focus mid-typing) — only the sidebar is refreshed.
+  async function persistPack({ silent = false } = {}) {
+    if (!currentPack || currentPack.builtIn) return false;
+    clearTimeout(saveTimer);
+    if (saving) { saveQueued = true; return false; }    // coalesce overlapping saves
+    if (!dirty && silent) return true;                  // nothing pending
+
+    saving = true;
+    setSaveStatus('saving');
+    const packId = currentPack.id;
     try {
-      const data = await api(`/api/packs/${currentPack.id}`, {
+      const data = await api(`/api/packs/${packId}`, {
         method: 'PUT',
-        body: JSON.stringify(payload),
+        body: JSON.stringify(currentPayload()),
       });
-      currentPack = data.pack;
-      clearDirty();
-      toast('Saved!');
+      // Only adopt the server copy if we're still on the same pack —
+      // and keep the in-memory arrays so open inputs stay bound.
+      if (currentPack && currentPack.id === packId) {
+        currentPack.name     = data.pack.name;
+        currentPack.icon     = data.pack.icon;
+        currentPack.settings = data.pack.settings;
+        clearDirty();
+        setSaveStatus('saved');
+      }
       await refreshPackList();
-      renderEditor();
+      if (!silent) toast('Saved!');
+      return true;
     } catch (err) {
+      setSaveStatus('error');
       toast('Save failed: ' + err.message, true);
+      return false;
+    } finally {
+      saving = false;
+      if (saveQueued) { saveQueued = false; scheduleAutosave(); }
     }
   }
 
+  // Manual SAVE button — same write, with a confirmation toast.
+  async function savePack() {
+    if (!currentPack) return;
+    if (currentPack.builtIn) { toast('Built-in packs cannot be edited', true); return; }
+    await persistPack({ silent: false });
+  }
+
+  function setSaveStatus(kind) {
+    const el = $('save-status');
+    if (!el) return;
+    const map = {
+      unsaved: 'Unsaved changes…',
+      saving:  'Saving…',
+      saved:   'All changes saved',
+      error:   'Save failed — retrying on next edit',
+    };
+    el.textContent = map[kind] || '';
+    el.className = `save-status ${kind}`;
+  }
+
   async function createPack() {
-    if (dirty) {
-      const ok = await confirmDialog('Unsaved changes', 'Discard your changes and create a new pack?', 'DISCARD');
-      if (!ok) return;
-    }
+    // Flush whatever is in the editor before switching away from it
+    await persistPack({ silent: true });
     try {
       const data = await api('/api/packs', {
         method: 'POST',
@@ -454,12 +509,13 @@
       });
       currentPack = data.pack;
       clearDirty();
+      expandedRounds.clear();
       await refreshPackList();
       renderEditor();
       activateTab('rounds');
       $('pack-name').focus();
       $('pack-name').select();
-      toast('New mode created — start adding questions!');
+      toast('New mode created — changes save automatically.');
     } catch (err) {
       toast('Create failed: ' + err.message, true);
     }
@@ -513,6 +569,8 @@
   function markDirty() {
     dirty = true;
     $('btn-save').classList.add('has-changes');
+    setSaveStatus('unsaved');
+    scheduleAutosave();
   }
 
   function clearDirty() {
@@ -562,13 +620,14 @@
     $('btn-new-pack').addEventListener('click', createPack);
     $('btn-save').addEventListener('click', savePack);
     $('btn-delete').addEventListener('click', deletePack);
+    // RELOAD — save anything pending, then re-fetch from the server
     $('btn-cancel').addEventListener('click', async () => {
       if (!currentPack) return;
-      if (dirty) {
-        const ok = await confirmDialog('Reload', 'Discard unsaved changes and reload?', 'DISCARD');
-        if (!ok) return;
-      }
-      loadPack(currentPack.id);
+      await persistPack({ silent: true });
+      const id = currentPack.id;
+      currentPack = null;      // force loadPack to actually re-fetch
+      await loadPack(id);
+      toast('Reloaded from server');
     });
     $('btn-duplicate').addEventListener('click', duplicatePack);
 
@@ -649,9 +708,21 @@
     // Tabs
     $$('.tab-btn').forEach((b) => b.addEventListener('click', () => activateTab(b.dataset.tab)));
 
-    // Warn before leaving with unsaved changes
-    window.addEventListener('beforeunload', (e) => {
-      if (dirty) { e.preventDefault(); e.returnValue = ''; }
+    // Last-chance save when the tab closes / reloads. beforeunload can't
+    // await a fetch, so fire a keepalive beacon with the current pack.
+    function flushOnUnload() {
+      if (!dirty || !currentPack || currentPack.builtIn) return;
+      try {
+        const blob = new Blob([JSON.stringify(currentPayload())], { type: 'application/json' });
+        navigator.sendBeacon(`/api/packs/${currentPack.id}/save`, blob);
+        clearDirty();
+      } catch { /* best effort */ }
+    }
+    window.addEventListener('pagehide', flushOnUnload);
+    window.addEventListener('beforeunload', flushOnUnload);
+    // Also save as soon as the tab is backgrounded
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && dirty) persistPack({ silent: true });
     });
 
     // Cmd/Ctrl-S to save
