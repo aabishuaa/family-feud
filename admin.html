@@ -36,6 +36,14 @@
         <div class="pack-list-empty">Loading…</div>
       </div>
       <button id="btn-new-pack" class="btn-admin btn-primary-admin"><i class="ico" data-icon="plus"></i> NEW MODE</button>
+
+      <div class="sidebar-tools">
+        <div class="sidebar-tools-title">BACKUP</div>
+        <button id="btn-export" class="btn-admin btn-ghost" title="Download all your custom modes as a JSON file"><i class="ico" data-icon="download"></i> DOWNLOAD BACKUP</button>
+        <button id="btn-import" class="btn-admin btn-ghost" title="Restore modes from a backup file"><i class="ico" data-icon="upload"></i> RESTORE FROM FILE</button>
+        <input type="file" id="import-file" accept="application/json,.json" hidden>
+        <p class="sidebar-tools-hint">Your modes live in <code>data/packs.json</code>. Download a copy before moving machines or redeploying.</p>
+      </div>
     </aside>
 
     <!-- RIGHT: Editor -->
