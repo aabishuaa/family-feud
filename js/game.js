@@ -10,6 +10,76 @@
   const $q = (sel, ctx = document) => ctx.querySelector(sel);
   const $all = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
+  // ── Pacing ─────────────────────────────────────────────────
+  // Every dramatic beat in one place. Nudge SPEED down to slow the
+  // whole show further, up to tighten it.
+  const SPEED = 1;
+  const ms = (n) => Math.round(n / SPEED);
+  const T = {
+    roundIntro:    ms(2600),  // "ROUND n" card before the face-off
+    strikeCard:    ms(1500),  // "STRIKE!" during a face-off
+    strikeBeat:    ms(1300),  // pause after the 3rd strike, before the steal
+    stealCard:     ms(2600),  // "<TEAM> STEAL!"
+    stealResolve:  ms(3000),  // after STEALS IT / KEEPS THE POINTS
+    faceoffWin:    ms(2600),  // "<TEAM> WINS THE FACE-OFF!"
+    passPlay:      ms(2200),  // "PLAYS!" / "PASSED!"
+    boardClear:    ms(1800),  // last tile revealed → round ends
+    leftoverGap:   ms(1000),  // between auto-revealed leftover answers
+    roundEndHint:  ms(3200),  // before the "press NEXT ROUND" prompt
+    winnerCard:    ms(3600),  // "<TEAM> WINS! ADVANCING TO FAST MONEY"
+    roundWinCard:  ms(3000),  // "<TEAM> WINS n POINTS!"
+    fmFinish:      ms(4500),  // Fast Money result → end screen
+  };
+
+  // ── Tile text auto-fit ─────────────────────────────────────
+  // Shrinks each answer until it fits its tile, so answers are NEVER
+  // cut off with an ellipsis no matter how long they are.
+  const TILE_FONT_MAX = 24;
+  const TILE_FONT_MIN = 8;
+
+  function fitTileText(tile) {
+    const back = tile.querySelector('.tile-back');
+    const el   = tile.querySelector('.tile-answer');
+    if (!back || !el) return;
+
+    const cs = getComputedStyle(back);
+    const availH = back.clientHeight
+      - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+      - parseFloat(cs.borderTopWidth) - parseFloat(cs.borderBottomWidth);
+    if (!(availH > 0)) return; // not laid out yet
+
+    // Binary-search the largest font size whose wrapped text still fits.
+    let lo = TILE_FONT_MIN, hi = TILE_FONT_MAX, best = TILE_FONT_MIN;
+    while (hi - lo > 0.25) {
+      const mid = (lo + hi) / 2;
+      el.style.fontSize = mid + 'px';
+      if (el.scrollHeight <= availH) { best = mid; lo = mid; }
+      else                           { hi = mid; }
+    }
+    el.style.fontSize = best.toFixed(2) + 'px';
+
+    // Safety net: if the box changed since the search (fonts finishing
+    // loading, grid resizing), step down until it genuinely fits.
+    let guard = 0;
+    while (el.scrollHeight > availH && best > TILE_FONT_MIN && guard++ < 60) {
+      best = Math.max(TILE_FONT_MIN, best - 0.5);
+      el.style.fontSize = best.toFixed(2) + 'px';
+    }
+  }
+
+  function fitAllTiles() {
+    $all('#answer-board .tile').forEach(fitTileText);
+  }
+
+  // Re-fit whenever the layout can change
+  let _fitRaf = null;
+  function scheduleFit() {
+    cancelAnimationFrame(_fitRaf);
+    _fitRaf = requestAnimationFrame(() => requestAnimationFrame(fitAllTiles));
+  }
+  window.addEventListener('resize', scheduleFit);
+  if (document.fonts?.ready) document.fonts.ready.then(scheduleFit);
+
   // ── State ──────────────────────────────────────────────────
   const state = {
     phase: 'intro',      // intro | setup | faceoff | playing | steal | revealAll | roundEnd | fastMoney | gameEnd
@@ -49,6 +119,7 @@
     document.body.dataset.phase = phase;
     updateControlButtons();
     updateStatusBar();
+    scheduleFit();
     broadcastState();
   }
 
@@ -212,6 +283,7 @@
     setPhase('setup');
     prepareRound(); // lay the face-down tiles on the board straight away
     updateStatusBar('Press START ROUND to reveal the question and begin Round 1!');
+    scheduleFit();  // board is on-screen now — size the answers to it
   }
 
   // ── ROUND PREP ─────────────────────────────────────────────
@@ -271,11 +343,11 @@
     state.roundPrepared = false;
 
     Sounds.surveySays();
-    showOverlay(`ROUND ${state.round + 1}`, 1800);
+    showOverlay(`ROUND ${state.round + 1}`, T.roundIntro);
     setTimeout(() => {
       setPhase('faceoff');
       updateStatusBar('Teams buzz in to start! Click your BUZZ button!');
-    }, 1800);
+    }, T.roundIntro);
   }
 
   // Swap the START ROUND button label between round / fast-money modes.
@@ -322,6 +394,8 @@
 
       board.appendChild(tile);
     });
+
+    scheduleFit(); // scale every answer to fit its tile
   }
 
   // ── REVEAL ANSWER ──────────────────────────────────────────
@@ -333,6 +407,7 @@
 
     state.revealedAnswers.add(ansId);
     tile.classList.add('revealed');
+    fitTileText(tile);
 
     const ans = state.currentRound.answers.find((a) => a.id === ansId);
     const pts = ans.points * state.multiplier;
@@ -357,7 +432,7 @@
       state.revealedAnswers.size === state.currentRound.answers.length &&
       (state.phase === 'playing' || state.phase === 'steal')
     ) {
-      setTimeout(() => endRound(state.activeTeam), 1200);
+      setTimeout(() => endRound(state.activeTeam), T.boardClear);
     }
   }
 
@@ -383,6 +458,7 @@
     const tile = $q(`.tile[data-ans-id="${ansId}"]`);
     if (!tile) return;
     tile.classList.add('revealed', 'dimmed');
+    fitTileText(tile);
     state.revealedAnswers.add(ansId);
     Sounds.reveal();
     broadcastState();
@@ -394,7 +470,7 @@
     if (state.phase !== 'roundEnd') return;
     const remaining = state.currentRound.answers.filter((a) => !state.revealedAnswers.has(a.id));
     remaining.forEach((ans, i) => {
-      setTimeout(() => revealLeftover(ans.id), i * 700);
+      setTimeout(() => revealLeftover(ans.id), i * T.leftoverGap);
     });
   }
 
@@ -427,12 +503,12 @@
         setPhase('steal');
         const otherTeam = 1 - state.activeTeam;
         setActiveTeam(otherTeam);
-        showOverlay(`${state.teams[otherTeam].name.toUpperCase()}\nSTEAL!`, 2000);
+        showOverlay(`${state.teams[otherTeam].name.toUpperCase()}\nSTEAL!`, T.stealCard);
         Sounds.steal();
         setTimeout(() => {
           updateStatusBar(`${state.teams[otherTeam].name} — Give ONE answer to steal!`);
-        }, 2000);
-      }, 800);
+        }, T.stealCard);
+      }, T.strikeBeat);
     }
   }
 
@@ -442,8 +518,8 @@
     if (ansId) revealAnswer(ansId);
     Sounds.stealWin();
     const winner = state.activeTeam;
-    showOverlay(`${state.teams[winner].name.toUpperCase()}\nSTEALS IT!`, 2000);
-    setTimeout(() => { if (state.phase === 'steal') endRound(winner); }, 2200);
+    showOverlay(`${state.teams[winner].name.toUpperCase()}\nSTEALS IT!`, T.stealCard);
+    setTimeout(() => { if (state.phase === 'steal') endRound(winner); }, T.stealResolve);
   }
 
   // ── STEAL WRONG ────────────────────────────────────────────
@@ -451,7 +527,7 @@
     if (state.phase !== 'steal') return;
     Sounds.stealFail();
     const winner = 1 - state.activeTeam; // original playing team wins
-    showOverlay(`${state.teams[winner].name.toUpperCase()}\nKEEPS THE POINTS!`, 2000);
+    showOverlay(`${state.teams[winner].name.toUpperCase()}\nKEEPS THE POINTS!`, T.stealCard);
     setTimeout(() => { if (state.phase === 'steal') endRound(winner); }, 2200);
   }
 
@@ -484,12 +560,12 @@
     Sounds.roundWin();
     showOverlay(
       `${state.teams[winnerTeamIdx].name.toUpperCase()}\nWINS ${pts} POINTS!`,
-      2500
+      T.roundWinCard
     );
 
     // No auto-advance and no auto-reveal: leftover answers stay covered
     // until the host taps them (or hits REVEAL ALL), then NEXT ROUND.
-    setTimeout(updateRoundEndStatus, 2600);
+    setTimeout(updateRoundEndStatus, T.roundEndHint);
   }
 
   // Move from roundEnd → setup for the next round (or arm Fast Money).
@@ -509,7 +585,7 @@
       Sounds.roundWin();
       showOverlay(
         `${state.teams[leadIdx].name.toUpperCase()} WINS!\nADVANCING TO FAST MONEY`,
-        3200
+        T.winnerCard
       );
       setActiveTeam(leadIdx);
       updateStatusBar(`${state.teams[leadIdx].name} advances! Press FAST MONEY to begin.`);
@@ -535,7 +611,7 @@
     const slot = $all('.strike-slot')[idx];
     if (!slot) return;
     slot.classList.add('flash');
-    setTimeout(() => slot.classList.remove('flash'), 600);
+    setTimeout(() => slot.classList.remove('flash'), 800);
   }
 
   // ── TEAM DISPLAY ───────────────────────────────────────────
@@ -624,7 +700,7 @@
     if (state.phase !== 'faceoffAnswer') return;
     const fo = state.faceoff;
     Sounds.wrong();
-    showOverlay('STRIKE!', 900);
+    showOverlay('STRIKE!', T.strikeCard);
 
     if (fo.stage === 'first') {
       // Face-off passes straight to the other team
@@ -655,7 +731,7 @@
     setActiveTeam(teamIdx);
     Sounds.correct();
     setPhase('passOrPlay'); // switch immediately so stray taps can't re-enter the face-off
-    showOverlay(`${state.teams[teamIdx].name.toUpperCase()}\nWINS THE FACE-OFF!`, 2000);
+    showOverlay(`${state.teams[teamIdx].name.toUpperCase()}\nWINS THE FACE-OFF!`, T.faceoffWin);
     updateStatusBar(`${state.teams[teamIdx].name} — PLAY the board or PASS to the other team?`);
   }
 
@@ -674,7 +750,7 @@
       play
         ? `${state.teams[playingTeam].name.toUpperCase()}\nPLAYS!`
         : `PASSED!\n${state.teams[playingTeam].name.toUpperCase()} PLAYS!`,
-      1600
+      T.passPlay
     );
     updateStatusBar(`${state.teams[playingTeam].name} is playing with fresh strikes!`);
   }
@@ -756,7 +832,7 @@
   function animateScoreAdd(teamIdx, from, pts) {
     const el = $(`team${teamIdx + 1}-score`);
     el.classList.add('score-flash');
-    setTimeout(() => el.classList.remove('score-flash'), 700);
+    setTimeout(() => el.classList.remove('score-flash'), 1050);
     const start  = from;
     const target = from + pts;
     const dur = 800;
@@ -774,7 +850,7 @@
     bubble.className = 'points-bubble';
     bubble.textContent = text;
     tileEl.appendChild(bubble);
-    setTimeout(() => bubble.remove(), 1000);
+    setTimeout(() => bubble.remove(), 1600);
   }
 
   // ── STARFIELD ──────────────────────────────────────────────
@@ -1170,7 +1246,7 @@
     if (won) Sounds.gameOver();
     else     Sounds.roundWin();
 
-    setTimeout(() => showEndScreen(), 3500);
+    setTimeout(() => showEndScreen(), T.fmFinish);
   }
 
   // ── GAME END ───────────────────────────────────────────────

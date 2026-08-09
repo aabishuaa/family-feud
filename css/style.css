@@ -33,7 +33,7 @@
   --glow-blue:   0 0 20px rgba(30,144,255,.8),  0 0 60px rgba(30,75,216,.45);
   --glow-red:    0 0 20px rgba(255,26,26,.9),   0 0 60px rgba(255,26,26,.4);
 
-  --flip-dur: 0.6s;
+  --flip-dur: 0.8s;
 }
 
 html, body {
@@ -362,7 +362,7 @@ body::after {
   text-shadow: 0 0 30px rgba(255,69,0,.35);
 }
 .score-value.score-flash {
-  animation: scoreFlash .7s ease;
+  animation: scoreFlash 1s ease;
 }
 @keyframes scoreFlash {
   0%   { color: var(--gold); text-shadow: var(--glow-gold); transform: scale(1.18); }
@@ -575,8 +575,8 @@ body::after {
   border: 2px solid var(--gold-shine);
   transform: rotateY(180deg);
   justify-content: space-between;
-  padding: 0 24px;
-  gap: 14px;
+  padding: 6px 18px;
+  gap: 12px;
   box-shadow: inset 0 0 40px rgba(180,120,0,.3),
               inset 0 2px 0 rgba(255,255,255,.4);
 }
@@ -588,25 +588,30 @@ body::after {
   border-radius: 10px 10px 0 0;
   pointer-events: none;
 }
+/* Answer text is auto-scaled by fitTileText() in game.js so it ALWAYS
+   fits its tile — never truncated with an ellipsis. No line-clamp and
+   no max-height here; the JS shrinks the font until the text fits. */
 .tile-answer {
-  font-size: clamp(15px, 1.7vw, 23px);
+  font-size: 22px;            /* starting size — overwritten by the fitter */
   font-weight: 700; color: #110500;
-  letter-spacing: .04em; text-transform: uppercase;
-  flex: 1;
+  letter-spacing: .02em; text-transform: uppercase;
+  flex: 1 1 auto; min-width: 0;
   white-space: normal;
-  line-height: 1.08;
-  overflow: hidden;
-  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  line-height: 1.12;
+  overflow-wrap: anywhere;    /* let very long single words break */
+  hyphens: auto;
   z-index: 1;
   text-shadow: 0 1px 2px rgba(255,255,255,.25);
 }
 .tile-points {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(26px, 3.8vw, 40px);
+  font-size: clamp(24px, 3.2vw, 38px);
+  line-height: 1;
   color: #110500;
   background: rgba(0,0,0,.12);
-  padding: 2px 12px; border-radius: 6px;
-  letter-spacing: .04em; flex-shrink: 0;
+  padding: 3px 11px; border-radius: 6px;
+  letter-spacing: .04em;
+  flex: 0 0 auto;             /* never squeezed by long answers */
   z-index: 1;
   text-shadow: 0 1px 3px rgba(255,255,255,.2);
 }
@@ -623,7 +628,7 @@ body::after {
 .tile.number-one .tile-back {
   background: linear-gradient(150deg, #ffc800, #fff8a0 40%, #ffd700 60%, #ffc000);
   box-shadow: var(--glow-gold), 0 0 80px rgba(255,215,0,.6);
-  animation: numberOnePulse 1s ease 4;
+  animation: numberOnePulse 1.15s ease 4;
 }
 @keyframes numberOnePulse {
   0%, 100% { box-shadow: var(--glow-gold), 0 0 40px rgba(255,215,0,.4); }
@@ -644,7 +649,7 @@ body::after {
   font-size: 28px; color: var(--gold);
   text-shadow: var(--glow-gold);
   pointer-events: none;
-  animation: bubbleUp 1s ease forwards;
+  animation: bubbleUp 1.5s ease forwards;
   z-index: 10;
 }
 @keyframes bubbleUp {
@@ -654,26 +659,33 @@ body::after {
 
 /* ── Strikes ──────────────────────────────────────────────── */
 #strikes-container {
-  display: flex; justify-content: center;
-  gap: 20px; margin-top: 6px; flex-shrink: 0;
+  display: flex; justify-content: center; align-items: center;
+  gap: clamp(30px, 5vw, 70px);       /* generous, scales with the screen */
+  margin-top: 14px;
+  padding: 4px 0 8px;
+  flex-shrink: 0;
 }
 .strike-slot {
-  width: 62px; height: 62px;
+  width:  clamp(54px, 5.2vw, 76px);
+  height: clamp(54px, 5.2vw, 76px);
+  flex-shrink: 0;
   border-radius: 50%;
   border: 3px solid rgba(255,26,26,.18);
   display: flex; align-items: center; justify-content: center;
   position: relative;
-  transition: border-color .25s, box-shadow .25s;
+  transition: border-color .3s, box-shadow .3s, background .3s;
   background: rgba(0,0,0,.2);
 }
 .strike-slot::before,
 .strike-slot::after {
   content: ''; position: absolute;
-  width: 58%; height: 5px;
+  top: 50%; left: 50%;
+  width: 56%; height: 6px;
+  margin: -3px 0 0 -28%;              /* centre the bar on the circle */
   background: var(--strike-red);
   border-radius: 3px;
-  opacity: 0; transition: opacity .2s;
-  box-shadow: 0 0 8px var(--strike-red);
+  opacity: 0; transition: opacity .25s;
+  box-shadow: 0 0 10px var(--strike-red);
 }
 .strike-slot::before { transform: rotate(45deg);  }
 .strike-slot::after  { transform: rotate(-45deg); }
@@ -686,7 +698,7 @@ body::after {
 .strike-slot.active::before,
 .strike-slot.active::after { opacity: 1; }
 
-.strike-slot.flash { animation: strikeFlash .5s ease; }
+.strike-slot.flash { animation: strikeFlash .75s ease; }
 @keyframes strikeFlash {
   0%   { transform: scale(1.7); box-shadow: var(--glow-red), 0 0 80px var(--strike-red); }
   100% { transform: scale(1); }
@@ -762,14 +774,14 @@ body::after {
   background: rgba(0,0,0,.6);
   backdrop-filter: blur(6px);
   z-index: 50; opacity: 0; pointer-events: none;
-  transition: opacity .22s;
+  transition: opacity .35s;
 }
 #game-overlay.active  { opacity: 1; }
 #game-overlay.fadeout { opacity: 0; }
 
 #overlay-content {
   text-align: center;
-  animation: overlayPop .32s cubic-bezier(.34,1.56,.64,1) forwards;
+  animation: overlayPop .45s cubic-bezier(.34,1.56,.64,1) forwards;
 }
 @keyframes overlayPop {
   from { transform: scale(.55); opacity: 0; }
