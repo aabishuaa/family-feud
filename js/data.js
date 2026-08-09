@@ -224,16 +224,156 @@ var GAME_PACK_SEEDS = [
     ],
   },
 
-  // ── Jamaican (empty template) ────────────────────────────
-  {
-    id: 'jamaican',
-    name: 'Jamaican',
-    icon: '🇯🇲',
-    builtIn: false,
-    settings: { ...DEFAULT_SETTINGS },
-    rounds: [],
-    fastMoneyRounds: [{ questions: [] }],
-  },
+  // ── Jamaican ──────────────────────────────────────────────
+{
+id: 'jamaican',
+name: 'Jamaican',
+icon: '🇯🇲',
+builtIn: false,
+settings: { ...DEFAULT_SETTINGS },
+
+rounds: [
+{
+id: 1,
+question: 'I\'m a stereotypical Jamaican man so I...',
+answers: [
+{ id: 1, text: 'Have multiple baby mothers', points: 55 },
+{ id: 2, text: 'Love marijuana',           points: 22 },
+{ id: 3, text: 'Drink Wray & Nephew',      points: 12 },
+{ id: 4, text: 'Am a scammer',             points: 11 },
+],
+},
+
+{
+id: 2,
+question: "What's a name you'd expect from a Jamaican woman over 50?",
+answers: [
+{ id: 1, text: 'Jacqueline', points: 33 },
+{ id: 2, text: 'Sandra',     points: 21 },
+{ id: 3, text: 'Gertrude',   points: 19 },
+{ id: 4, text: 'Sonia',      points: 11 },
+{ id: 5, text: 'Andrea',     points: 7  },
+{ id: 6, text: 'Tanya',      points: 5  },
+{ id: 7, text: 'Paulette',   points: 2  },
+{ id: 8, text: 'Carolyn',    points: 2  },
+],
+},
+
+{
+id: 3,
+question: "The Jamaican national dish isn't Ackee and Saltfish, it's...",
+answers: [
+{ id: 1, text: 'Mackerel and Rice/Dumpling', points: 32 },
+{ id: 2, text: 'Jerk Chicken & Festival',    points: 32 },
+{ id: 3, text: 'Stewed Peas',                points: 28 },
+{ id: 4, text: 'Beef Patty',                 points: 20 },
+{ id: 5, text: 'Curried Chicken and Rice',   points: 20 },
+{ id: 6, text: 'Cock Soup',                  points: 9  },
+{ id: 7, text: 'Cornmeal Porridge',          points: 5  },
+],
+},
+
+{
+id: 4,
+question: "Name something you'll find in almost every Jamaican yaad.",
+answers: [
+{ id: 1, text: 'Some sorta fruit tree',             points: 39 },
+{ id: 2, text: 'Mongrel dog',                       points: 31 },
+{ id: 3, text: 'Water drums',                       points: 15 },
+{ id: 4, text: 'Cement/Gravel/House Materials',     points: 8  },
+{ id: 5, text: 'Rake/Yaad Broom',                   points: 6  },
+{ id: 6, text: 'A random old item',                 points: 1  },
+],
+},
+
+{
+id: 5,
+question: "It's Sunday in a Jamaican household so this means...",
+answers: [
+{ id: 1, text: 'Go to church',       points: 38 },
+{ id: 2, text: 'Clean yuh house',    points: 22 },
+{ id: 3, text: 'Big dinna',          points: 20 },
+{ id: 4, text: 'Prepare fi Monday',  points: 12 },
+{ id: 5, text: 'Watch 2 show',       points: 8  },
+],
+},
+
+{
+id: 6,
+question: 'Name something Jamaicans do when they hear a loud noise outside.',
+answers: [
+{ id: 1, text: 'Guh faas outside',          points: 45 },
+{ id: 2, text: 'Peep through the window',    points: 25 },
+{ id: 3, text: 'Ask "Wah gwaan?"',          points: 20 },
+{ id: 4, text: 'Call a neighbour/friend',   points: 6  },
+{ id: 5, text: 'Mind dem business',         points: 4  },
+],
+},
+],
+
+fastMoneyRounds: [
+{
+questions: [
+{
+question: 'Name a word in English that Jamaicans often confuse',
+answers: [
+{ text: 'Arrogant → Ignorant',           points: 30 },
+{ text: 'Certificate → Cerfitikit',      points: 20 },
+{ text: 'Especially → Expecially',        points: 21 },
+{ text: 'Specific → Pacific',             points: 18 },
+{ text: 'Ask → Aks',                       points: 30 },
+{ text: 'Have to → Of to',                points: 30 },
+],
+},
+
+{
+question: "Something's wrong with the country. Who or what gets blamed first?",
+answers: [
+{ text: 'Andrew',             points: 35 },
+{ text: 'MP',                 points: 19 },
+{ text: 'The Devil',          points: 13 },
+{ text: 'Crime and Violence', points: 10 },
+{ text: 'Politicians',        points: 12 },
+{ text: 'Police',             points: 8  },
+],
+},
+
+{
+question: "I'm Jamaican but I don't like...",
+answers: [
+{ text: 'Ackee',           points: 20 },
+{ text: 'Guinep',          points: 10 },
+{ text: 'Mango',           points: 11 },
+{ text: 'Dancehall Music', points: 14 },
+{ text: 'Bun and Cheese',  points: 15 },
+{ text: 'Pork',            points: 8  },
+],
+},
+
+{
+question: 'Name a holiday food that you can expect to eat during holiday time',
+answers: [
+{ text: 'Bun and Cheese',       points: 20 },
+{ text: 'Christmas Cake',       points: 22 },
+{ text: 'Sorrel',               points: 24 },
+{ text: 'Ham',                  points: 25 },
+{ text: 'Escovitch Fish',       points: 15 },
+{ text: 'Rice and Gungo Peas',  points: 14 },
+],
+},
+
+{
+question: "What's another name a Jamaican would call five hundred dollars?",
+answers: [
+{ text: 'Nanny',   points: 50 },
+{ text: '5 bills', points: 10 },
+{ text: '5 dolla', points: 8  },
+],
+},
+],
+},
+],
+},
 
   // ── Bible (empty template) ───────────────────────────────
   {
